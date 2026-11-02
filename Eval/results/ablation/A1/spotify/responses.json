@@ -1,0 +1,4667 @@
+[
+  {
+    "query_index": 1,
+    "query": "Make me a playlist containing three songs of Mariah Carey and name it 'Love Mariah'",
+    "oracle": [
+      "GET /search",
+      "GET /me",
+      "POST /users/{user_id}/playlists",
+      "POST /playlists/{playlist_id}/tracks"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 23.272,
+    "total_latency_s": 40.964,
+    "planned_count": 1,
+    "oracle_count": 4,
+    "delta_sl": 3,
+    "is_correct_path": false,
+    "step_recall": 0.25,
+    "step_precision": 1.0,
+    "step_f1": 0.4,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/me"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "POST",
+          "/playlists/{playlist_id}/tracks"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": true,
+    "matches": [
+      {
+        "planned": [
+          "POST",
+          "/users/me/playlists"
+        ],
+        "oracle": [
+          "POST",
+          "/users/{user_id}/playlists"
+        ]
+      }
+    ],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/me"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "POST",
+          "/playlists/{playlist_id}/tracks"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: create playlist named 'Love Mariah' | MAP: spotify / POST /users/{user_id}/playlists | CHAIN: none | COMBINE: single task | FILTER: name='Love Mariah', public=true | VALIDATE: ✓",
+      "tasks": [
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/users/me/playlists",
+          "input": {
+            "description": "Three songs by Mariah Carey",
+            "name": "Love Mariah",
+            "public": true
+          },
+          "operation": "POST",
+          "service_id": "spotify",
+          "task_name": "create_mariah_playlist",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/users/me/playlists",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/users/me/playlists"
+        }
+      ]
+    },
+    "execution_results": [
+      {
+        "task_name": "create_mariah_playlist",
+        "operation": "POST",
+        "status": "SUCCESS",
+        "status_code": 201
+      }
+    ]
+  },
+  {
+    "query_index": 2,
+    "query": "Add the first song of The Dark Side of the Moon in my playback queue",
+    "oracle": [
+      "GET /search",
+      "GET /albums/{id}/tracks",
+      "POST /me/player/queue"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 24.644,
+    "total_latency_s": 42.622,
+    "planned_count": 0,
+    "oracle_count": 3,
+    "delta_sl": 3,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/albums/{id}/tracks"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "POST",
+          "/me/player/queue"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/albums/{id}/tracks"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "POST",
+          "/me/player/queue"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: find album 'The Dark Side of the Moon', get first track, add to queue | MAP: spotify / GET /me/player/currently-playing (no album search endpoint exists) | CHAIN: none | COMBINE: single task | FILTER: N/A | VALIDATE: ✗ No service in catalog can search for albums or tracks by name. The Spotify service only provides current playback state, queue management, and playback control. It lacks a search endpoint. The TMDB service is for movies. Therefore, the request cannot be fulfilled.",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 3,
+    "query": "Add Summertime Sadness by Lana Del Rey in my first playlist",
+    "oracle": [
+      "GET /search",
+      "GET /me/playlists",
+      "POST /playlists/{playlist_id}/tracks"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 24.836,
+    "total_latency_s": 42.5,
+    "planned_count": 0,
+    "oracle_count": 3,
+    "delta_sl": 3,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/me/playlists"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "POST",
+          "/playlists/{playlist_id}/tracks"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/me/playlists"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "POST",
+          "/playlists/{playlist_id}/tracks"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: find user's playlists, identify the first one, add track 'Summertime Sadness' to it | MAP: spotify / GET /me/top/playlists (not available), spotify / POST /users/{user_id}/playlists (create), spotify / POST /playlists/{playlist_id}/tracks (add) | CHAIN: none (no GET for playlists exists in catalog) | COMBINE: single task | FILTER: N/A | VALIDATE: ✗ No service endpoint exists to list user playlists. Cannot identify 'first playlist'.",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 4,
+    "query": "Skip to the next track and set the volume to 60",
+    "oracle": [
+      "POST /me/player/next",
+      "PUT /me/player/volume"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 28.155,
+    "total_latency_s": 44.59,
+    "planned_count": 2,
+    "oracle_count": 2,
+    "delta_sl": 0,
+    "is_correct_path": true,
+    "step_recall": 1.0,
+    "step_precision": 1.0,
+    "step_f1": 1.0,
+    "step_missed": [],
+    "tasks_successful": true,
+    "matches": [
+      {
+        "planned": [
+          "POST",
+          "/me/player/next"
+        ],
+        "oracle": [
+          "POST",
+          "/me/player/next"
+        ]
+      },
+      {
+        "planned": [
+          "PUT",
+          "/me/player/volume"
+        ],
+        "oracle": [
+          "PUT",
+          "/me/player/volume"
+        ]
+      }
+    ],
+    "mismatches": [],
+    "oracle_missed": [],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: skip to next track, set volume to 60 | MAP: spotify / POST /me/player/next, spotify / PUT /me/player/volume | CHAIN: none | COMBINE: single task (multiple independent actions) | FILTER: volume_percent=60 | VALIDATE: ✓",
+      "tasks": [
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/player/next",
+          "input": "",
+          "operation": "POST",
+          "service_id": "spotify",
+          "task_name": "skip_to_next_track",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/player/next",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/player/next"
+        },
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/player/volume?volume_percent=60",
+          "input": "",
+          "operation": "PUT",
+          "service_id": "spotify",
+          "task_name": "set_volume_to_60",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/player/volume?volume_percent=60",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/player/volume?volume_percent=60"
+        }
+      ]
+    },
+    "execution_results": [
+      {
+        "task_name": "skip_to_next_track",
+        "operation": "POST",
+        "status": "SUCCESS",
+        "status_code": 204
+      },
+      {
+        "task_name": "set_volume_to_60",
+        "operation": "PUT",
+        "status": "SUCCESS",
+        "status_code": 204
+      }
+    ]
+  },
+  {
+    "query_index": 5,
+    "query": "Put the song now being played into My Music",
+    "oracle": [
+      "GET /me/player/currently-playing",
+      "PUT /me/tracks"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 24.912,
+    "total_latency_s": 42.024,
+    "planned_count": 0,
+    "oracle_count": 2,
+    "delta_sl": 2,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/player/currently-playing"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/tracks"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/player/currently-playing"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/tracks"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: get currently playing track details, create playlist 'My Music' | MAP: spotify / GET /me/player/currently-playing + spotify / POST /users/{user_id}/playlists | CHAIN: none (playlist creation does not depend on track data in this API schema) | COMBINE: chain: create_playlist consumes get_currently_playing via JMESPath for user_id | FILTER: none | VALIDATE: ✗ user_id not available in currently-playing response; ✗ cannot create playlist without user_id; ✗ no service provides user_id; tasks=[]",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 6,
+    "query": "Append the first song of the newest album of my following first artist to my player queue",
+    "oracle": [
+      "GET /me/following",
+      "GET /artists/{id}/albums",
+      "GET /albums/{id}/tracks",
+      "POST /me/player/queue"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 21.765,
+    "total_latency_s": 39.931,
+    "planned_count": 0,
+    "oracle_count": 4,
+    "delta_sl": 4,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/following"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/artists/{id}/albums"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/albums/{id}/tracks"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "POST",
+          "/me/player/queue"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/following"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/artists/{id}/albums"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/albums/{id}/tracks"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "POST",
+          "/me/player/queue"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: find followed artists, find newest album for first artist, find first track of that album, append to queue | MAP: spotify / GET /me/following/artists (NOT IN CATALOG) | CHAIN: none | COMBINE: single task | FILTER: N/A | VALIDATE: ✗ No service in catalog provides 'followed artists' or 'album tracks' data. The Spotify service only exposes player control and library removal endpoints. Cannot fulfill request.",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 7,
+    "query": "Follow the artist of the song now playing",
+    "oracle": [
+      "GET /me/player/currently-playing",
+      "GET /tracks/{id}",
+      "PUT /me/following"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 28.806,
+    "total_latency_s": 45.494,
+    "planned_count": 2,
+    "oracle_count": 3,
+    "delta_sl": 1,
+    "is_correct_path": false,
+    "step_recall": 0.6667,
+    "step_precision": 1.0,
+    "step_f1": 0.8,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/tracks/{id}"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": true,
+    "matches": [
+      {
+        "planned": [
+          "GET",
+          "/me/player/currently-playing"
+        ],
+        "oracle": [
+          "GET",
+          "/me/player/currently-playing"
+        ]
+      },
+      {
+        "planned": [
+          "PUT",
+          "/me/following"
+        ],
+        "oracle": [
+          "PUT",
+          "/me/following"
+        ]
+      }
+    ],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/tracks/{id}"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: get currently playing track -> extract artist ID -> follow artist | MAP: spotify / GET /me/player/currently-playing + PUT /me/following | CHAIN: PUT ids <- get_currently_playing.item.artists[0].id | COMBINE: chain: follow_artist consumes get_currently_playing via JMESPath | FILTER: none | VALIDATE: ✓",
+      "tasks": [
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/player/currently-playing",
+          "input": "",
+          "operation": "GET",
+          "service_id": "spotify",
+          "task_name": "get_currently_playing",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/player/currently-playing",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/player/currently-playing"
+        },
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/following?type=artist",
+          "input": {
+            "ids": [
+              "5f4g5h6i7j8k9l0m1n2o"
+            ]
+          },
+          "operation": "PUT",
+          "service_id": "spotify",
+          "task_name": "follow_artist",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/following?type=artist",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/following?type=artist"
+        }
+      ]
+    },
+    "execution_results": [
+      {
+        "task_name": "get_currently_playing",
+        "operation": "GET",
+        "status": "SUCCESS",
+        "status_code": 200
+      },
+      {
+        "task_name": "follow_artist",
+        "operation": "PUT",
+        "status": "SUCCESS",
+        "status_code": 204
+      }
+    ]
+  },
+  {
+    "query_index": 8,
+    "query": "Play a song from Taylor Swift's newest album",
+    "oracle": [
+      "GET /search",
+      "GET /artists/{id}/albums",
+      "PUT /me/player/play"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 24.295,
+    "total_latency_s": 41.025,
+    "planned_count": 0,
+    "oracle_count": 3,
+    "delta_sl": 3,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/artists/{id}/albums"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/player/play"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/artists/{id}/albums"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/player/play"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: find Taylor Swift's newest album, get a track from it, play it | MAP: tmdb / GET /person/popular + GET /person/{id}/movie_credits (no music data) | CHAIN: none | COMBINE: single task | FILTER: N/A | VALIDATE: ✗ No service in catalog provides artist discography or album track listings. Spotify only supports playing known URIs or contexts, not searching for artists/albums. TMDB is for movies/TV. Request cannot be fulfilled.",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 9,
+    "query": "play me some quiet songs",
+    "oracle": [
+      "GET /search",
+      "PUT /me/player/play"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 20.823,
+    "total_latency_s": 37.679,
+    "planned_count": 0,
+    "oracle_count": 2,
+    "delta_sl": 2,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/player/play"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/player/play"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: find quiet songs (qualitative constraint) | MAP: spotify / GET /me/tracks | CHAIN: none | COMBINE: single task | FILTER: no quantitative threshold available in catalog; 'quiet' cannot be filtered via API params or SQL without a noise metric service | VALIDATE: ✗ No service provides audio loudness/quietness data; 'quiet' is subjective and not mappable to any catalog field. Cannot satisfy request.",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 10,
+    "query": "Follow the artist of the first song recently played",
+    "oracle": [
+      "GET /me/player/currently-playing",
+      "GET /tracks/{id}",
+      "PUT /me/following"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 20.925,
+    "total_latency_s": 38.236,
+    "planned_count": 0,
+    "oracle_count": 3,
+    "delta_sl": 3,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/player/currently-playing"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/tracks/{id}"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/following"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/player/currently-playing"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/tracks/{id}"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/following"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: find recently played song -> get artist -> follow artist | MAP: spotify / GET /me/player/recently-played (not in catalog) | CHAIN: none | COMBINE: single task | FILTER: none | VALIDATE: ✗ No endpoint for 'recently played' in catalog. Only /me/top/{type} exists. Cannot satisfy 'recently played' constraint.",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 11,
+    "query": "Switch to the next song and set the single track repeat mode",
+    "oracle": [
+      "POST /me/player/next",
+      "PUT /me/player/repeat"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 27.818,
+    "total_latency_s": 44.528,
+    "planned_count": 2,
+    "oracle_count": 2,
+    "delta_sl": 0,
+    "is_correct_path": true,
+    "step_recall": 1.0,
+    "step_precision": 1.0,
+    "step_f1": 1.0,
+    "step_missed": [],
+    "tasks_successful": true,
+    "matches": [
+      {
+        "planned": [
+          "POST",
+          "/me/player/next"
+        ],
+        "oracle": [
+          "POST",
+          "/me/player/next"
+        ]
+      },
+      {
+        "planned": [
+          "PUT",
+          "/me/player/repeat"
+        ],
+        "oracle": [
+          "PUT",
+          "/me/player/repeat"
+        ]
+      }
+    ],
+    "mismatches": [],
+    "oracle_missed": [],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: skip to next track, set repeat mode to track | MAP: spotify / POST /me/player/next + PUT /me/player/repeat | CHAIN: none | COMBINE: single task (two independent actions) | FILTER: state=track for repeat | VALIDATE: ✓",
+      "tasks": [
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/player/next",
+          "input": "",
+          "operation": "POST",
+          "service_id": "spotify",
+          "task_name": "skip_to_next",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/player/next",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/player/next"
+        },
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/player/repeat?state=track",
+          "input": "",
+          "operation": "PUT",
+          "service_id": "spotify",
+          "task_name": "set_repeat_track",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/player/repeat?state=track",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/player/repeat?state=track"
+        }
+      ]
+    },
+    "execution_results": [
+      {
+        "task_name": "skip_to_next",
+        "operation": "POST",
+        "status": "SUCCESS",
+        "status_code": 204
+      },
+      {
+        "task_name": "set_repeat_track",
+        "operation": "PUT",
+        "status": "SUCCESS",
+        "status_code": 204
+      }
+    ]
+  },
+  {
+    "query_index": 12,
+    "query": "Save Jay Chou's album Mojito",
+    "oracle": [
+      "GET /search",
+      "PUT /me/albums"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 21.846,
+    "total_latency_s": 38.974,
+    "planned_count": 0,
+    "oracle_count": 2,
+    "delta_sl": 2,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/albums"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/albums"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: find artist Jay Chou, find album Mojito, save album to user library | MAP: spotify / GET /me/playlists (to check existing), spotify / GET /albums/{id} (needs id), spotify /artists/{id}/top-tracks (irrelevant) | CHAIN: none (no search endpoint for artist/album by name in catalog) | COMBINE: single task | FILTER: N/A | VALIDATE: ✗ No search endpoint exists in catalog to find 'Jay Chou' or 'Mojito' by name. All endpoints require known IDs. Cannot fulfill request.",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 13,
+    "query": "Rename my first playlist to \"My First\"",
+    "oracle": [
+      "GET /me/playlists",
+      "PUT /playlists/{playlist_id}"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 22.985,
+    "total_latency_s": 39.512,
+    "planned_count": 0,
+    "oracle_count": 2,
+    "delta_sl": 2,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/playlists"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/playlists/{playlist_id}"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/playlists"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/playlists/{playlist_id}"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: find first playlist ID, then rename it to 'My First' | MAP: spotify / POST /users/{user_id}/playlists (to create? No, user says 'my first playlist' implying existing) -> Wait, catalog has no GET /me/playlists. Only POST to create. Re-reading catalog: No GET endpoint to list playlists. Cannot find 'first' playlist without a list endpoint. | MAP: Re-evaluating. The catalog only allows creating playlists (POST) or updating a known playlist (PUT). It does not allow listing existing playlists. Therefore, I cannot identify 'my first playlist' to rename it. | VALIDATE: No available service can fulfil this request because there is no GET endpoint to list playlists and identify the first one.",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 14,
+    "query": "Remove following from the artist of the currently playing music",
+    "oracle": [
+      "GET /me/player/currently-playing",
+      "GET /tracks/{id}",
+      "DELETE /me/following"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 23.328,
+    "total_latency_s": 40.135,
+    "planned_count": 0,
+    "oracle_count": 3,
+    "delta_sl": 3,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/player/currently-playing"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/tracks/{id}"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "DELETE",
+          "/me/following"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/player/currently-playing"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/tracks/{id}"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "DELETE",
+          "/me/following"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: identify currently playing track's artist -> remove that artist from following list | MAP: spotify / GET /me/player/currently-playing (NOT IN CATALOG) | CHAIN: none | COMBINE: single task | FILTER: N/A | VALIDATE: ✗ No endpoint in catalog retrieves currently playing track or artist. Cannot proceed.",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 15,
+    "query": "Pause playback, turn down the volume and resume playing",
+    "oracle": [
+      "PUT /me/player/pause",
+      "PUT /me/player/volume",
+      "PUT /me/player/play"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 27.339,
+    "total_latency_s": 44.176,
+    "planned_count": 3,
+    "oracle_count": 3,
+    "delta_sl": 0,
+    "is_correct_path": true,
+    "step_recall": 1.0,
+    "step_precision": 1.0,
+    "step_f1": 1.0,
+    "step_missed": [],
+    "tasks_successful": true,
+    "matches": [
+      {
+        "planned": [
+          "PUT",
+          "/me/player/pause"
+        ],
+        "oracle": [
+          "PUT",
+          "/me/player/pause"
+        ]
+      },
+      {
+        "planned": [
+          "PUT",
+          "/me/player/volume"
+        ],
+        "oracle": [
+          "PUT",
+          "/me/player/volume"
+        ]
+      },
+      {
+        "planned": [
+          "PUT",
+          "/me/player/play"
+        ],
+        "oracle": [
+          "PUT",
+          "/me/player/play"
+        ]
+      }
+    ],
+    "mismatches": [],
+    "oracle_missed": [],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: pause playback, set volume to 50, resume playback | MAP: spotify / PUT /me/player/pause, PUT /me/player/volume, PUT /me/player/play | CHAIN: none (sequential independent calls) | COMBINE: single task (multiple sequential tasks for state changes) | FILTER: volume_percent=50 | VALIDATE: ✓",
+      "tasks": [
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/player/pause",
+          "input": "",
+          "operation": "PUT",
+          "service_id": "spotify",
+          "task_name": "pause_playback",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/player/pause",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/player/pause"
+        },
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/player/volume?volume_percent=50",
+          "input": "",
+          "operation": "PUT",
+          "service_id": "spotify",
+          "task_name": "set_volume",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/player/volume?volume_percent=50",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/player/volume?volume_percent=50"
+        },
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/player/play",
+          "input": "",
+          "operation": "PUT",
+          "service_id": "spotify",
+          "task_name": "resume_playback",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/player/play",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/player/play"
+        }
+      ]
+    },
+    "execution_results": [
+      {
+        "task_name": "pause_playback",
+        "operation": "PUT",
+        "status": "SUCCESS",
+        "status_code": 204
+      },
+      {
+        "task_name": "set_volume",
+        "operation": "PUT",
+        "status": "SUCCESS",
+        "status_code": 204
+      },
+      {
+        "task_name": "resume_playback",
+        "operation": "PUT",
+        "status": "SUCCESS",
+        "status_code": 204
+      }
+    ]
+  },
+  {
+    "query_index": 16,
+    "query": "Add songs from the current playing queue to a new playlist called \"Current\"",
+    "oracle": [
+      "GET /me/player/queue",
+      "GET /me",
+      "POST /users/{user_id}/playlists",
+      "PUT /playlists/{playlist_id}"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 29.878,
+    "total_latency_s": 47.387,
+    "planned_count": 3,
+    "oracle_count": 4,
+    "delta_sl": 1,
+    "is_correct_path": false,
+    "step_recall": 0.5,
+    "step_precision": 0.6667,
+    "step_f1": 0.5714,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/playlists/{playlist_id}"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": true,
+    "matches": [
+      {
+        "planned": [
+          "GET",
+          "/me/player/queue"
+        ],
+        "oracle": [
+          "GET",
+          "/me/player/queue"
+        ]
+      },
+      {
+        "planned": [
+          "POST",
+          "/users/me/playlists"
+        ],
+        "oracle": [
+          "POST",
+          "/users/{user_id}/playlists"
+        ]
+      }
+    ],
+    "mismatches": [
+      {
+        "planned": [
+          "POST",
+          "/playlists/{ph}/tracks"
+        ],
+        "oracle": null
+      }
+    ],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/playlists/{playlist_id}"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: get current queue, create new playlist named 'Current', add queue tracks to playlist | MAP: spotify / GET /me/player/queue, spotify / POST /users/{user_id}/playlists, spotify / POST /playlists/{playlist_id}/tracks | CHAIN: create_playlist.user_id <- get_queue (implicit current user), add_tracks.playlist_id <- create_playlist.id, add_tracks.uris <- get_queue.queue[*].uri | COMBINE: chain: add_tracks consumes create_playlist and get_queue via JMESPath | FILTER: none | VALIDATE: ✓",
+      "tasks": [
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/player/queue",
+          "input": "",
+          "operation": "GET",
+          "service_id": "spotify",
+          "task_name": "get_current_queue",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/player/queue",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/player/queue"
+        },
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/users/me/playlists",
+          "input": {
+            "description": "Songs from current queue",
+            "name": "Current",
+            "public": false
+          },
+          "operation": "POST",
+          "service_id": "spotify",
+          "task_name": "create_current_playlist",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/users/me/playlists",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/users/me/playlists"
+        },
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/playlists/3c4d5e6f7g8h9i0j1k2l/tracks",
+          "input": {
+            "uris": [
+              "spotify:track:6hHcY0s4Vq0pXlJYg7eHjL"
+            ]
+          },
+          "operation": "POST",
+          "service_id": "spotify",
+          "task_name": "add_tracks_to_playlist",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/playlists/{{create_current_playlist.id}}/tracks",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/playlists/3c4d5e6f7g8h9i0j1k2l/tracks"
+        }
+      ]
+    },
+    "execution_results": [
+      {
+        "task_name": "get_current_queue",
+        "operation": "GET",
+        "status": "SUCCESS",
+        "status_code": 200
+      },
+      {
+        "task_name": "create_current_playlist",
+        "operation": "POST",
+        "status": "SUCCESS",
+        "status_code": 201
+      },
+      {
+        "task_name": "add_tracks_to_playlist",
+        "operation": "POST",
+        "status": "SUCCESS",
+        "status_code": 201
+      }
+    ]
+  },
+  {
+    "query_index": 17,
+    "query": "What is the name of the song I playing right now?",
+    "oracle": [
+      "GET /me/player/currently-playing"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 24.538,
+    "total_latency_s": 41.235,
+    "planned_count": 1,
+    "oracle_count": 1,
+    "delta_sl": 0,
+    "is_correct_path": true,
+    "step_recall": 1.0,
+    "step_precision": 1.0,
+    "step_f1": 1.0,
+    "step_missed": [],
+    "tasks_successful": true,
+    "matches": [
+      {
+        "planned": [
+          "GET",
+          "/me/player/currently-playing"
+        ],
+        "oracle": [
+          "GET",
+          "/me/player/currently-playing"
+        ]
+      }
+    ],
+    "mismatches": [],
+    "oracle_missed": [],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: name of currently playing song | MAP: spotify / GET /me/player/currently-playing | CHAIN: none | COMBINE: single task | FILTER: none | VALIDATE: ✓",
+      "tasks": [
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/player/currently-playing",
+          "input": "",
+          "operation": "GET",
+          "service_id": "spotify",
+          "task_name": "get_currently_playing",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/player/currently-playing",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/player/currently-playing"
+        }
+      ]
+    },
+    "execution_results": [
+      {
+        "task_name": "get_currently_playing",
+        "operation": "GET",
+        "status": "SUCCESS",
+        "status_code": 200
+      }
+    ]
+  },
+  {
+    "query_index": 18,
+    "query": "Remove the first album from my music",
+    "oracle": [
+      "GET /me/albums",
+      "DELETE /me/albums"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 23.897,
+    "total_latency_s": 41.241,
+    "planned_count": 0,
+    "oracle_count": 2,
+    "delta_sl": 2,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/albums"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "DELETE",
+          "/me/albums"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/albums"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "DELETE",
+          "/me/albums"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: list user albums, identify first album ID, delete that album | MAP: spotify / GET /me/albums (not in catalog) -> FAIL | CHAIN: none | COMBINE: single task | FILTER: N/A | VALIDATE: No GET /me/albums endpoint exists in catalog; only DELETE /me/albums exists which requires IDs as input. Cannot retrieve album list to identify 'first' album.",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 19,
+    "query": "Show me the albums I saved",
+    "oracle": [
+      "GET /me/albums"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 24.624,
+    "total_latency_s": 41.276,
+    "planned_count": 1,
+    "oracle_count": 1,
+    "delta_sl": 0,
+    "is_correct_path": true,
+    "step_recall": 1.0,
+    "step_precision": 1.0,
+    "step_f1": 1.0,
+    "step_missed": [],
+    "tasks_successful": true,
+    "matches": [
+      {
+        "planned": [
+          "GET",
+          "/me/albums"
+        ],
+        "oracle": [
+          "GET",
+          "/me/albums"
+        ]
+      }
+    ],
+    "mismatches": [],
+    "oracle_missed": [],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: list of saved albums | MAP: spotify / GET /me/albums | CHAIN: none | COMBINE: single task | FILTER: none | VALIDATE: ✓",
+      "tasks": [
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/albums",
+          "input": "",
+          "operation": "GET",
+          "service_id": "spotify",
+          "task_name": "get_saved_albums",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/albums",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/albums"
+        }
+      ]
+    },
+    "execution_results": [
+      {
+        "task_name": "get_saved_albums",
+        "operation": "GET",
+        "status": "SUCCESS",
+        "status_code": 200
+      }
+    ]
+  },
+  {
+    "query_index": 20,
+    "query": "Follow the artist of the song which is playing right now.",
+    "oracle": [
+      "GET /me/player/currently-playing",
+      "GET /tracks/{id}",
+      "PUT /me/following"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 28.586,
+    "total_latency_s": 45.235,
+    "planned_count": 2,
+    "oracle_count": 3,
+    "delta_sl": 1,
+    "is_correct_path": false,
+    "step_recall": 0.6667,
+    "step_precision": 1.0,
+    "step_f1": 0.8,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/tracks/{id}"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": true,
+    "matches": [
+      {
+        "planned": [
+          "GET",
+          "/me/player/currently-playing"
+        ],
+        "oracle": [
+          "GET",
+          "/me/player/currently-playing"
+        ]
+      },
+      {
+        "planned": [
+          "PUT",
+          "/me/following"
+        ],
+        "oracle": [
+          "PUT",
+          "/me/following"
+        ]
+      }
+    ],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/tracks/{id}"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: get currently playing track -> extract artist ID -> follow artist | MAP: spotify / GET /me/player/currently-playing + PUT /me/following | CHAIN: PUT ids <- get_currently_playing.item.artists[0].id | COMBINE: chain: follow_artist consumes get_currently_playing via JMESPath | FILTER: none | VALIDATE: ✓",
+      "tasks": [
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/player/currently-playing",
+          "input": "",
+          "operation": "GET",
+          "service_id": "spotify",
+          "task_name": "get_currently_playing",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/player/currently-playing",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/player/currently-playing"
+        },
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/following?type=artist",
+          "input": {
+            "ids": [
+              "5f4g5h6i7j8k9l0m1n2o"
+            ]
+          },
+          "operation": "PUT",
+          "service_id": "spotify",
+          "task_name": "follow_artist",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/following?type=artist",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/following?type=artist"
+        }
+      ]
+    },
+    "execution_results": [
+      {
+        "task_name": "get_currently_playing",
+        "operation": "GET",
+        "status": "SUCCESS",
+        "status_code": 200
+      },
+      {
+        "task_name": "follow_artist",
+        "operation": "PUT",
+        "status": "SUCCESS",
+        "status_code": 204
+      }
+    ]
+  },
+  {
+    "query_index": 21,
+    "query": "Recommend me some tracks with the same genre of the music currently playing",
+    "oracle": [
+      "GET /me/player/currently-playing",
+      "GET /search"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 21.755,
+    "total_latency_s": 39.102,
+    "planned_count": 0,
+    "oracle_count": 2,
+    "delta_sl": 2,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/player/currently-playing"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/player/currently-playing"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: get currently playing track details (including genre) -> find similar tracks based on genre | MAP: spotify / GET /me/player/currently-playing | CHAIN: none (single task returns the track info, but catalog lacks a 'find similar tracks' endpoint) | COMBINE: single task | FILTER: none | VALIDATE: ✗ No service in catalog provides 'similar tracks' or 'tracks by genre' functionality. The catalog only allows getting currently playing, top tracks/artists, and playback control. Cannot fulfill 'recommend tracks' request.",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 22,
+    "query": "Append the first track in The Beatle's newest album to my 'My Rock' playlist",
+    "oracle": [
+      "GET /search",
+      "GET /artists/{id}/albums",
+      "POST /playlists/{playlist_id}/tracks",
+      "PUT /playlists/{playlist_id}"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 23.574,
+    "total_latency_s": 41.115,
+    "planned_count": 0,
+    "oracle_count": 4,
+    "delta_sl": 4,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/artists/{id}/albums"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "POST",
+          "/playlists/{playlist_id}/tracks"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/playlists/{playlist_id}"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/artists/{id}/albums"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "POST",
+          "/playlists/{playlist_id}/tracks"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/playlists/{playlist_id}"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: find 'My Rock' playlist ID, find The Beatles' newest album, get first track from that album, append track to playlist | MAP: spotify / GET /me/top/tracks (no playlist endpoint), spotify / POST /users/{user_id}/playlists (create only), spotify / PUT /me/player/play (playback only) | CHAIN: none | COMBINE: single task | FILTER: none | VALIDATE: ✗ No service endpoint exists to retrieve a playlist by name ('My Rock') or to append a track to an existing playlist. The catalog only supports creating new playlists or queuing tracks for immediate playback, not modifying existing playlists. ✗ No service endpoint exists to search for artists or albums by name ('The Beatles'). The catalog only supports getting top tracks/artists for the current user or discovering movies/TV shows via TMDB.",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 23,
+    "query": "Make top tracks of Taylor Swift a new playlist named \"Love Taylor\"",
+    "oracle": [
+      "GET /artists/{id}/top-tracks",
+      "GET /me",
+      "POST /users/{user_id}/playlists",
+      "POST /playlists/{playlist_id}/tracks"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 38.35,
+    "total_latency_s": 55.272,
+    "planned_count": 4,
+    "oracle_count": 4,
+    "delta_sl": 0,
+    "is_correct_path": false,
+    "step_recall": 0.75,
+    "step_precision": 0.75,
+    "step_f1": 0.75,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": true,
+    "matches": [
+      {
+        "planned": [
+          "GET",
+          "/artists/{ph}/top-tracks"
+        ],
+        "oracle": [
+          "GET",
+          "/artists/{id}/top-tracks"
+        ]
+      },
+      {
+        "planned": [
+          "POST",
+          "/users/{ph}/playlists"
+        ],
+        "oracle": [
+          "POST",
+          "/users/{user_id}/playlists"
+        ]
+      },
+      {
+        "planned": [
+          "POST",
+          "/playlists/{ph}/tracks"
+        ],
+        "oracle": [
+          "POST",
+          "/playlists/{playlist_id}/tracks"
+        ]
+      }
+    ],
+    "mismatches": [
+      {
+        "planned": [
+          "GET",
+          "/me/top/artists"
+        ],
+        "oracle": null
+      }
+    ],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: find Taylor Swift artist ID, get top tracks, create playlist, add tracks | MAP: spotify / GET /me/top/artists (filter for Taylor Swift), spotify / GET /artists/{id}/top-tracks, spotify / POST /users/{user_id}/playlists, spotify / POST /playlists/{playlist_id}/tracks | CHAIN: get_top_tracks.id ← get_top_artists.items[?name=='Taylor Swift'][0].id; create_playlist.user_id ← get_top_artists.items[?name=='Taylor Swift'][0].id (fallback to 'me' if needed, but catalog requires user_id); add_tracks.playlist_id ← create_playlist.id; add_tracks.uris ← get_top_tracks.tracks[*].uri | COMBINE: chain: add_tracks consumes create_playlist and get_top_tracks via JMESPath | FILTER: artist name match via JMESPath | VALIDATE: ✓",
+      "tasks": [
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/top/artists",
+          "input": "",
+          "operation": "GET",
+          "service_id": "spotify",
+          "task_name": "get_top_artists",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/top/artists",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/top/artists"
+        },
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/artists/5f4g5h6i7j8k9l0m1n2o/top-tracks",
+          "input": "",
+          "operation": "GET",
+          "service_id": "spotify",
+          "task_name": "get_top_tracks",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/artists/{{get_top_artists.items[?name=='Taylor Swift'] | [0].id}}/top-tracks",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/artists/5f4g5h6i7j8k9l0m1n2o/top-tracks"
+        },
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/users/5f4g5h6i7j8k9l0m1n2o/playlists",
+          "input": {
+            "description": "Top tracks by Taylor Swift",
+            "name": "Love Taylor",
+            "public": true
+          },
+          "operation": "POST",
+          "service_id": "spotify",
+          "task_name": "create_playlist",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/users/{{get_top_artists.items[?name=='Taylor Swift'] | [0].id}}/playlists",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/users/5f4g5h6i7j8k9l0m1n2o/playlists"
+        },
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/playlists/3c4d5e6f7g8h9i0j1k2l/tracks",
+          "input": {
+            "position": 0,
+            "uris": [
+              "spotify:track:6hHcY0s4Vq0pXlJYg7eHjL"
+            ]
+          },
+          "operation": "POST",
+          "service_id": "spotify",
+          "task_name": "add_tracks_to_playlist",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/playlists/{{create_playlist.id}}/tracks",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/playlists/3c4d5e6f7g8h9i0j1k2l/tracks"
+        }
+      ]
+    },
+    "execution_results": [
+      {
+        "task_name": "get_top_artists",
+        "operation": "GET",
+        "status": "SUCCESS",
+        "status_code": 200
+      },
+      {
+        "task_name": "get_top_tracks",
+        "operation": "GET",
+        "status": "SUCCESS",
+        "status_code": 200
+      },
+      {
+        "task_name": "create_playlist",
+        "operation": "POST",
+        "status": "SUCCESS",
+        "status_code": 201
+      },
+      {
+        "task_name": "add_tracks_to_playlist",
+        "operation": "POST",
+        "status": "SUCCESS",
+        "status_code": 201
+      }
+    ]
+  },
+  {
+    "query_index": 24,
+    "query": "Who is my favorite artist?",
+    "oracle": [
+      "GET /me/top/{type}"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 24.616,
+    "total_latency_s": 41.071,
+    "planned_count": 1,
+    "oracle_count": 1,
+    "delta_sl": 0,
+    "is_correct_path": true,
+    "step_recall": 1.0,
+    "step_precision": 1.0,
+    "step_f1": 1.0,
+    "step_missed": [],
+    "tasks_successful": true,
+    "matches": [
+      {
+        "planned": [
+          "GET",
+          "/me/top/artists"
+        ],
+        "oracle": [
+          "GET",
+          "/me/top/{type}"
+        ]
+      }
+    ],
+    "mismatches": [],
+    "oracle_missed": [],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: user's top artist | MAP: spotify / GET /me/top/{type} with type=artists | CHAIN: none | COMBINE: single task | FILTER: type=artists | VALIDATE: ✓",
+      "tasks": [
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/top/artists",
+          "input": "",
+          "operation": "GET",
+          "service_id": "spotify",
+          "task_name": "get_top_artist",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/top/artists",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/top/artists"
+        }
+      ]
+    },
+    "execution_results": [
+      {
+        "task_name": "get_top_artist",
+        "operation": "GET",
+        "status": "SUCCESS",
+        "status_code": 200
+      }
+    ]
+  },
+  {
+    "query_index": 25,
+    "query": "Give me a song of my favorite artist",
+    "oracle": [
+      "GET /me/top/{type}",
+      "GET /artists/{id}"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 28.916,
+    "total_latency_s": 45.254,
+    "planned_count": 2,
+    "oracle_count": 2,
+    "delta_sl": 0,
+    "is_correct_path": false,
+    "step_recall": 0.5,
+    "step_precision": 0.5,
+    "step_f1": 0.5,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/artists/{id}"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": true,
+    "matches": [
+      {
+        "planned": [
+          "GET",
+          "/me/top/artists"
+        ],
+        "oracle": [
+          "GET",
+          "/me/top/{type}"
+        ]
+      }
+    ],
+    "mismatches": [
+      {
+        "planned": [
+          "GET",
+          "/artists/{ph}/top-tracks"
+        ],
+        "oracle": null
+      }
+    ],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/artists/{id}"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: get user's top artists, pick first, get top tracks of that artist, pick first track | MAP: spotify / GET /me/top/artists + GET /artists/{id}/top-tracks | CHAIN: get_top_tracks.url ← get_top_artists.items[0].id | COMBINE: chain: get_top_tracks consumes get_top_artists via JMESPath | FILTER: none | VALIDATE: ✓",
+      "tasks": [
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/top/artists",
+          "input": "",
+          "operation": "GET",
+          "service_id": "spotify",
+          "task_name": "get_top_artists",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/top/artists",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/top/artists"
+        },
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/artists/5f4g5h6i7j8k9l0m1n2o/top-tracks",
+          "input": "",
+          "operation": "GET",
+          "service_id": "spotify",
+          "task_name": "get_top_tracks",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/artists/{{get_top_artists.items[0].id}}/top-tracks",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/artists/5f4g5h6i7j8k9l0m1n2o/top-tracks"
+        }
+      ]
+    },
+    "execution_results": [
+      {
+        "task_name": "get_top_artists",
+        "operation": "GET",
+        "status": "SUCCESS",
+        "status_code": 200
+      },
+      {
+        "task_name": "get_top_tracks",
+        "operation": "GET",
+        "status": "SUCCESS",
+        "status_code": 200
+      }
+    ]
+  },
+  {
+    "query_index": 26,
+    "query": "Delete all music from my 'My R&B' playlist and rename it as 'Test'",
+    "oracle": [
+      "GET /me/playlists",
+      "DELETE /playlists/{playlist_id}/tracks",
+      "PUT /playlists/{playlist_id}"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 21.813,
+    "total_latency_s": 39.536,
+    "planned_count": 0,
+    "oracle_count": 3,
+    "delta_sl": 3,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/playlists"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "DELETE",
+          "/playlists/{playlist_id}/tracks"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/playlists/{playlist_id}"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/playlists"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "DELETE",
+          "/playlists/{playlist_id}/tracks"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/playlists/{playlist_id}"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: delete tracks from 'My R&B' playlist, rename playlist | MAP: spotify / DELETE /playlists/{playlist_id}/tracks, spotify / PUT /playlists/{playlist_id} | CHAIN: none | COMBINE: single task | FILTER: none | VALIDATE: No service in catalog supports GET /playlists (to find playlist_id) or PUT /playlists (to rename). The catalog only lists DELETE /playlists/{playlist_id}/tracks (requires known ID) and player controls. Cannot fulfill request.",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 27,
+    "query": "show me the album information of the song currently playing",
+    "oracle": [
+      "GET /me/player/currently-playing",
+      "GET /tracks/{id}"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 25.026,
+    "total_latency_s": 41.677,
+    "planned_count": 1,
+    "oracle_count": 2,
+    "delta_sl": 1,
+    "is_correct_path": false,
+    "step_recall": 0.5,
+    "step_precision": 1.0,
+    "step_f1": 0.6667,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/tracks/{id}"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": true,
+    "matches": [
+      {
+        "planned": [
+          "GET",
+          "/me/player/currently-playing"
+        ],
+        "oracle": [
+          "GET",
+          "/me/player/currently-playing"
+        ]
+      }
+    ],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/tracks/{id}"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: album information of currently playing song | MAP: spotify / GET /me/player/currently-playing | CHAIN: none | COMBINE: single task | FILTER: none | VALIDATE: ✓",
+      "tasks": [
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/player/currently-playing",
+          "input": "",
+          "operation": "GET",
+          "service_id": "spotify",
+          "task_name": "get_currently_playing_album",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/player/currently-playing",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/player/currently-playing"
+        }
+      ]
+    },
+    "execution_results": [
+      {
+        "task_name": "get_currently_playing_album",
+        "operation": "GET",
+        "status": "SUCCESS",
+        "status_code": 200
+      }
+    ]
+  },
+  {
+    "query_index": 28,
+    "query": "Pause device 'My PC' if it is now playing something",
+    "oracle": [
+      "GET /me/player",
+      "PUT /me/player/pause"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 28.875,
+    "total_latency_s": 45.86,
+    "planned_count": 2,
+    "oracle_count": 2,
+    "delta_sl": 0,
+    "is_correct_path": true,
+    "step_recall": 1.0,
+    "step_precision": 1.0,
+    "step_f1": 1.0,
+    "step_missed": [],
+    "tasks_successful": true,
+    "matches": [
+      {
+        "planned": [
+          "GET",
+          "/me/player"
+        ],
+        "oracle": [
+          "GET",
+          "/me/player"
+        ]
+      },
+      {
+        "planned": [
+          "PUT",
+          "/me/player/pause"
+        ],
+        "oracle": [
+          "PUT",
+          "/me/player/pause"
+        ]
+      }
+    ],
+    "mismatches": [],
+    "oracle_missed": [],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: check current playback state and device name; pause if device is 'My PC' and is_playing is true | MAP: spotify / GET /me/player + PUT /me/player/pause | CHAIN: pause_device ← get_playback_state (conditional logic) | COMBINE: chain: pause_device consumes get_playback_state via JMESPath | FILTER: device.name == 'My PC' && is_playing == true | VALIDATE: ✓ JMESPath filter on device.name and is_playing, ✓ pause only if condition met",
+      "tasks": [
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/player",
+          "input": "",
+          "operation": "GET",
+          "service_id": "spotify",
+          "task_name": "get_playback_state",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/player",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/player"
+        },
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/player/pause",
+          "input": "",
+          "operation": "PUT",
+          "service_id": "spotify",
+          "task_name": "pause_device",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/player/pause",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/player/pause"
+        }
+      ]
+    },
+    "execution_results": [
+      {
+        "task_name": "get_playback_state",
+        "operation": "GET",
+        "status": "SUCCESS",
+        "status_code": 200
+      },
+      {
+        "task_name": "pause_device",
+        "operation": "PUT",
+        "status": "SUCCESS",
+        "status_code": 204
+      }
+    ]
+  },
+  {
+    "query_index": 29,
+    "query": "pause current song and resume it on 'My PC'",
+    "oracle": [
+      "PUT /me/player/pause",
+      "GET /me/player/devices",
+      "PUT /me/player/play"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 25.761,
+    "total_latency_s": 42.881,
+    "planned_count": 2,
+    "oracle_count": 3,
+    "delta_sl": 1,
+    "is_correct_path": false,
+    "step_recall": 0.6667,
+    "step_precision": 1.0,
+    "step_f1": 0.8,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/player/devices"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": true,
+    "matches": [
+      {
+        "planned": [
+          "PUT",
+          "/me/player/pause"
+        ],
+        "oracle": [
+          "PUT",
+          "/me/player/pause"
+        ]
+      },
+      {
+        "planned": [
+          "PUT",
+          "/me/player/play"
+        ],
+        "oracle": [
+          "PUT",
+          "/me/player/play"
+        ]
+      }
+    ],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/player/devices"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: pause current playback, then resume on device 'My PC' | MAP: spotify / PUT /me/player/pause + spotify / PUT /me/player/play | CHAIN: none (device_id is a literal string provided by user) | COMBINE: chain: resume task follows pause task | FILTER: device_id='My PC' in play request | VALIDATE: ✓",
+      "tasks": [
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/player/pause",
+          "input": "",
+          "operation": "PUT",
+          "service_id": "spotify",
+          "task_name": "pause_current_song",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/player/pause",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/player/pause"
+        },
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/player/play",
+          "input": {
+            "device_id": "My PC"
+          },
+          "operation": "PUT",
+          "service_id": "spotify",
+          "task_name": "resume_on_pc",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/player/play",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/player/play"
+        }
+      ]
+    },
+    "execution_results": [
+      {
+        "task_name": "pause_current_song",
+        "operation": "PUT",
+        "status": "SUCCESS",
+        "status_code": 204
+      },
+      {
+        "task_name": "resume_on_pc",
+        "operation": "PUT",
+        "status": "SUCCESS",
+        "status_code": 204
+      }
+    ]
+  },
+  {
+    "query_index": 30,
+    "query": "show me the name of Maroon 5's newest album",
+    "oracle": [
+      "GET /search",
+      "GET /artists/{id}/albums"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 24.354,
+    "total_latency_s": 40.732,
+    "planned_count": 0,
+    "oracle_count": 2,
+    "delta_sl": 2,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/artists/{id}/albums"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/artists/{id}/albums"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: find Maroon 5 artist ID, get their albums, find newest by release date | MAP: spotify / GET /me/playlists (no artist search endpoint) | CHAIN: none | COMBINE: single task | FILTER: none | VALIDATE: ✗ No service endpoint exists to search for artists or retrieve artist discography. The Spotify catalog only provides current playback, user playlists, and playlist management. Cannot fulfill request.",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 31,
+    "query": "Recommend more artists base on my first following artist",
+    "oracle": [
+      "GET /me/following",
+      "GET /artists/{id}/related-artists"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 28.85,
+    "total_latency_s": 45.581,
+    "planned_count": 2,
+    "oracle_count": 2,
+    "delta_sl": 0,
+    "is_correct_path": false,
+    "step_recall": 0.5,
+    "step_precision": 0.5,
+    "step_f1": 0.5,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/following"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": true,
+    "matches": [
+      {
+        "planned": [
+          "GET",
+          "/artists/{ph}/related-artists"
+        ],
+        "oracle": [
+          "GET",
+          "/artists/{id}/related-artists"
+        ]
+      }
+    ],
+    "mismatches": [
+      {
+        "planned": [
+          "GET",
+          "/me/top/artists"
+        ],
+        "oracle": null
+      }
+    ],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/following"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: get user's top artists, pick the first one, get related artists for that artist | MAP: spotify / GET /me/top/{type} + GET /artists/{id}/related-artists | CHAIN: related-artists id ← get_top_artists.items[0].id | COMBINE: chain: get_related_artists consumes get_top_artists via JMESPath | FILTER: type=artists for top list | VALIDATE: ✓",
+      "tasks": [
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/top/artists",
+          "input": "",
+          "operation": "GET",
+          "service_id": "spotify",
+          "task_name": "get_top_artists",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/top/artists",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/top/artists"
+        },
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/artists/5f4g5h6i7j8k9l0m1n2o/related-artists",
+          "input": "",
+          "operation": "GET",
+          "service_id": "spotify",
+          "task_name": "get_related_artists",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/artists/{{get_top_artists.items[0].id}}/related-artists",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/artists/5f4g5h6i7j8k9l0m1n2o/related-artists"
+        }
+      ]
+    },
+    "execution_results": [
+      {
+        "task_name": "get_top_artists",
+        "operation": "GET",
+        "status": "SUCCESS",
+        "status_code": 200
+      },
+      {
+        "task_name": "get_related_artists",
+        "operation": "GET",
+        "status": "SUCCESS",
+        "status_code": 200
+      }
+    ]
+  },
+  {
+    "query_index": 32,
+    "query": "Unfollow the artist of the song now playing and skip to the next song",
+    "oracle": [
+      "GET /me/player/currently-playing",
+      "DELETE /me/following",
+      "POST /me/player/next"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 31.52,
+    "total_latency_s": 48.843,
+    "planned_count": 3,
+    "oracle_count": 3,
+    "delta_sl": 0,
+    "is_correct_path": true,
+    "step_recall": 1.0,
+    "step_precision": 1.0,
+    "step_f1": 1.0,
+    "step_missed": [],
+    "tasks_successful": true,
+    "matches": [
+      {
+        "planned": [
+          "GET",
+          "/me/player/currently-playing"
+        ],
+        "oracle": [
+          "GET",
+          "/me/player/currently-playing"
+        ]
+      },
+      {
+        "planned": [
+          "DELETE",
+          "/me/following"
+        ],
+        "oracle": [
+          "DELETE",
+          "/me/following"
+        ]
+      },
+      {
+        "planned": [
+          "POST",
+          "/me/player/next"
+        ],
+        "oracle": [
+          "POST",
+          "/me/player/next"
+        ]
+      }
+    ],
+    "mismatches": [],
+    "oracle_missed": [],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: get currently playing track to find artist ID, unfollow that artist, skip to next track | MAP: spotify / GET /me/player/currently-playing, spotify / DELETE /me/following, spotify / POST /me/player/next | CHAIN: unfollow_artist.input.type ← get_current_track.item.artists[0].id | COMBINE: chain: unfollow_artist consumes get_current_track via JMESPath, then skip_next | FILTER: none | VALIDATE: ✓",
+      "tasks": [
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/player/currently-playing",
+          "input": "",
+          "operation": "GET",
+          "service_id": "spotify",
+          "task_name": "get_current_track",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/player/currently-playing",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/player/currently-playing"
+        },
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/following",
+          "input": {
+            "ids": [
+              "5f4g5h6i7j8k9l0m1n2o"
+            ],
+            "type": "artist"
+          },
+          "operation": "DELETE",
+          "service_id": "spotify",
+          "task_name": "unfollow_artist",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/following",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/following"
+        },
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/player/next",
+          "input": "",
+          "operation": "POST",
+          "service_id": "spotify",
+          "task_name": "skip_next",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/player/next",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/player/next"
+        }
+      ]
+    },
+    "execution_results": [
+      {
+        "task_name": "get_current_track",
+        "operation": "GET",
+        "status": "SUCCESS",
+        "status_code": 200
+      },
+      {
+        "task_name": "unfollow_artist",
+        "operation": "DELETE",
+        "status": "SUCCESS",
+        "status_code": 204
+      },
+      {
+        "task_name": "skip_next",
+        "operation": "POST",
+        "status": "SUCCESS",
+        "status_code": 204
+      }
+    ]
+  },
+  {
+    "query_index": 33,
+    "query": "Follow Taylor Swift",
+    "oracle": [
+      "GET /search",
+      "PUT /me/following"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 29.337,
+    "total_latency_s": 46.574,
+    "planned_count": 2,
+    "oracle_count": 2,
+    "delta_sl": 0,
+    "is_correct_path": false,
+    "step_recall": 0.5,
+    "step_precision": 0.5,
+    "step_f1": 0.5,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": true,
+    "matches": [
+      {
+        "planned": [
+          "PUT",
+          "/me/following"
+        ],
+        "oracle": [
+          "PUT",
+          "/me/following"
+        ]
+      }
+    ],
+    "mismatches": [
+      {
+        "planned": [
+          "GET",
+          "/me/top/artists"
+        ],
+        "oracle": null
+      }
+    ],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: find Taylor Swift artist ID, then follow her | MAP: spotify / GET /me/top/artists + PUT /me/following | CHAIN: PUT ids ← get_top_artists.items[?name=='Taylor Swift'] | [0].id | COMBINE: chain: follow_artist consumes get_top_artists via JMESPath | FILTER: name match via JMESPath | VALIDATE: ✓",
+      "tasks": [
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/top/artists",
+          "input": "",
+          "operation": "GET",
+          "service_id": "spotify",
+          "task_name": "get_top_artists",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/top/artists",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/top/artists"
+        },
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/following?type=artist",
+          "input": {
+            "ids": [
+              "5f4g5h6i7j8k9l0m1n2o"
+            ]
+          },
+          "operation": "PUT",
+          "service_id": "spotify",
+          "task_name": "follow_artist",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/following?type=artist",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/following?type=artist"
+        }
+      ]
+    },
+    "execution_results": [
+      {
+        "task_name": "get_top_artists",
+        "operation": "GET",
+        "status": "SUCCESS",
+        "status_code": 200
+      },
+      {
+        "task_name": "follow_artist",
+        "operation": "PUT",
+        "status": "SUCCESS",
+        "status_code": 204
+      }
+    ]
+  },
+  {
+    "query_index": 34,
+    "query": "Make my top tracks a new playlist called 'My Top'",
+    "oracle": [
+      "GET /me/top/{type}",
+      "GET /me",
+      "POST /users/{user_id}/playlists",
+      "POST /playlists/{playlist_id}/tracks"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 34.268,
+    "total_latency_s": 51.336,
+    "planned_count": 3,
+    "oracle_count": 4,
+    "delta_sl": 1,
+    "is_correct_path": false,
+    "step_recall": 0.75,
+    "step_precision": 1.0,
+    "step_f1": 0.8571,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [
+      {
+        "planned": [
+          "GET",
+          "/me/top/tracks"
+        ],
+        "oracle": [
+          "GET",
+          "/me/top/{type}"
+        ]
+      },
+      {
+        "planned": [
+          "POST",
+          "/users/{ph}/playlists"
+        ],
+        "oracle": [
+          "POST",
+          "/users/{user_id}/playlists"
+        ]
+      },
+      {
+        "planned": [
+          "POST",
+          "/playlists/{ph}/tracks"
+        ],
+        "oracle": [
+          "POST",
+          "/playlists/{playlist_id}/tracks"
+        ]
+      }
+    ],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: get user's top tracks, create a new playlist named 'My Top', add those tracks to the playlist | MAP: spotify / GET /me/top/tracks, spotify / POST /users/{user_id}/playlists, spotify / POST /playlists/{playlist_id}/tracks | CHAIN: create_playlist.user_id <- get_top_tracks (implicit owner), add_tracks.playlist_id <- create_playlist.id, add_tracks.uris <- get_top_tracks.items[*].uri | COMBINE: chain: add_tracks consumes create_playlist and get_top_tracks via JMESPath | FILTER: type=tracks for top items | VALIDATE: ✓",
+      "tasks": [
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/top/tracks",
+          "input": "",
+          "operation": "GET",
+          "service_id": "spotify",
+          "task_name": "get_top_tracks",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/top/tracks",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/top/tracks"
+        },
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/users//playlists",
+          "input": {
+            "description": "My top tracks",
+            "name": "My Top",
+            "public": true
+          },
+          "operation": "POST",
+          "service_id": "spotify",
+          "task_name": "create_playlist",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/users/{{get_top_tracks.items[0].owner.id}}/playlists",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/users//playlists"
+        },
+        {
+          "input": {
+            "position": 0,
+            "uris": "{{get_top_tracks.items[*].uri}}"
+          },
+          "operation": "POST",
+          "service_id": "spotify",
+          "task_name": "add_tracks_to_playlist",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/playlists/{{create_playlist.id}}/tracks"
+        }
+      ]
+    },
+    "execution_results": [
+      {
+        "task_name": "get_top_tracks",
+        "operation": "GET",
+        "status": "SUCCESS",
+        "status_code": 200
+      },
+      {
+        "task_name": "create_playlist",
+        "operation": "POST",
+        "status": "ERROR",
+        "status_code": 400
+      }
+    ]
+  },
+  {
+    "query_index": 35,
+    "query": "Remove the first song from my playlist 'My Rock'",
+    "oracle": [
+      "GET /me/playlists",
+      "GET /playlists/{playlist_id}/tracks",
+      "DELETE /playlists/{playlist_id}/tracks"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 23.47,
+    "total_latency_s": 40.55,
+    "planned_count": 0,
+    "oracle_count": 3,
+    "delta_sl": 3,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/playlists"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/playlists/{playlist_id}/tracks"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "DELETE",
+          "/playlists/{playlist_id}/tracks"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/playlists"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/playlists/{playlist_id}/tracks"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "DELETE",
+          "/playlists/{playlist_id}/tracks"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: find playlist 'My Rock' ID, get its tracks, remove first track | MAP: spotify / DELETE /playlists/{playlist_id}/tracks | CHAIN: none (catalog lacks GET /playlists and GET /playlist/{id}/tracks) | COMBINE: single task | FILTER: N/A | VALIDATE: ✗ missing GET endpoints for playlist discovery and track listing; cannot satisfy request",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 36,
+    "query": "add top songs of the first of my following artist to My Music",
+    "oracle": [
+      "GET /me/following",
+      "GET /artists/{id}/top-tracks",
+      "PUT /me/tracks"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 35.093,
+    "total_latency_s": 53.118,
+    "planned_count": 4,
+    "oracle_count": 3,
+    "delta_sl": 1,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/following"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/artists/{id}/top-tracks"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/tracks"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [
+      {
+        "planned": [
+          "GET",
+          "/me/top/artists"
+        ],
+        "oracle": null
+      },
+      {
+        "planned": [
+          "GET",
+          "/me/top/tracks"
+        ],
+        "oracle": null
+      },
+      {
+        "planned": [
+          "GET",
+          "/search"
+        ],
+        "oracle": null
+      },
+      {
+        "planned": [
+          "POST",
+          "/playlists/{ph}/tracks"
+        ],
+        "oracle": null
+      }
+    ],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/following"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/artists/{id}/top-tracks"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/tracks"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: get top artists, get top tracks for first artist, find 'My Music' playlist, add tracks | MAP: spotify / GET /me/top/artists, spotify / GET /me/top/tracks, spotify /search, spotify /playlists/{id}/tracks | CHAIN: get_tracks uses first artist from get_artists; add_tracks uses playlist_id from search_my_music | COMBINE: chain: add_tracks consumes search_my_music and get_tracks via JMESPath | FILTER: type=artists, type=tracks, q='My Music' | VALIDATE: ✓",
+      "tasks": [
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/top/artists",
+          "input": "",
+          "operation": "GET",
+          "service_id": "spotify",
+          "task_name": "get_top_artists",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/top/artists",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/top/artists"
+        },
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/top/tracks",
+          "input": "",
+          "operation": "GET",
+          "service_id": "spotify",
+          "task_name": "get_top_tracks",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/top/tracks",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/top/tracks"
+        },
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/search?q=My%20Music&type=playlist",
+          "input": "",
+          "operation": "GET",
+          "service_id": "spotify",
+          "task_name": "search_my_music",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/search?q=My%20Music&type=playlist",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/search?q=My%20Music&type=playlist"
+        },
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/playlists//tracks",
+          "input": {
+            "position": 0,
+            "uris": ""
+          },
+          "operation": "POST",
+          "service_id": "spotify",
+          "task_name": "add_tracks_to_playlist",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/playlists/{{search_my_music.playlists.items[0].id}}/tracks",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/playlists//tracks"
+        }
+      ]
+    },
+    "execution_results": [
+      {
+        "task_name": "get_top_artists",
+        "operation": "GET",
+        "status": "SUCCESS",
+        "status_code": 200
+      },
+      {
+        "task_name": "get_top_tracks",
+        "operation": "GET",
+        "status": "SUCCESS",
+        "status_code": 200
+      },
+      {
+        "task_name": "search_my_music",
+        "operation": "GET",
+        "status": "SUCCESS",
+        "status_code": 200
+      },
+      {
+        "task_name": "add_tracks_to_playlist",
+        "operation": "POST",
+        "status": "ERROR",
+        "status_code": 400
+      }
+    ]
+  },
+  {
+    "query_index": 37,
+    "query": "Follow all the artists involved in the playlist 'My R&B'",
+    "oracle": [
+      "GET /me",
+      "GET /playlists/{playlist_id}",
+      "PUT /me/following"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 23.02,
+    "total_latency_s": 40.84,
+    "planned_count": 0,
+    "oracle_count": 3,
+    "delta_sl": 3,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/playlists/{playlist_id}"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/following"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/playlists/{playlist_id}"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/following"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: find playlist 'My R&B' -> get its tracks -> get artists from tracks -> follow those artists | MAP: spotify / GET /me/playlists -> spotify / GET /me/top/tracks (NOT AVAILABLE) -> spotify / PUT /me/following | CHAIN: none (cannot resolve playlist tracks with available endpoints) | COMBINE: single task | FILTER: N/A | VALIDATE: ✗ No endpoint exists to retrieve tracks from a specific playlist ID. The catalog only provides /me/playlists (list of playlists) and /me/top/{type} (top tracks), but no /playlists/{id}/tracks endpoint. Therefore, the request cannot be fulfilled.",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 38,
+    "query": "remove the second track from my playlist 'My R&B'",
+    "oracle": [
+      "GET /me/playlists",
+      "GET /playlists/{playlist_id}/tracks",
+      "DELETE /playlists/{playlist_id}/tracks"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 21.868,
+    "total_latency_s": 39.402,
+    "planned_count": 0,
+    "oracle_count": 3,
+    "delta_sl": 3,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/playlists"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/playlists/{playlist_id}/tracks"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "DELETE",
+          "/playlists/{playlist_id}/tracks"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/playlists"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/playlists/{playlist_id}/tracks"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "DELETE",
+          "/playlists/{playlist_id}/tracks"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "No available service can fulfil this request.",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 39,
+    "query": "remove the third track from My Music",
+    "oracle": [
+      "GET /me/tracks",
+      "DELETE /me/tracks"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 24.823,
+    "total_latency_s": 41.969,
+    "planned_count": 0,
+    "oracle_count": 2,
+    "delta_sl": 2,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/tracks"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "DELETE",
+          "/me/tracks"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/tracks"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "DELETE",
+          "/me/tracks"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: find playlist 'My Music' -> get its tracks -> remove the 3rd track | MAP: spotify / DELETE /playlists/{playlist_id}/tracks | CHAIN: none (no GET endpoint for playlists exists in catalog) | COMBINE: single task | FILTER: N/A | VALIDATE: ✗ No service endpoint exists to retrieve playlist ID by name or to list tracks in a playlist. The catalog only provides DELETE endpoints requiring known IDs/URIs. Cannot fulfill request.",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 40,
+    "query": "Follow all the singers involved in the song When You Believe",
+    "oracle": [
+      "GET /search",
+      "GET /track/{id}",
+      "PUT /me/following"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 23.918,
+    "total_latency_s": 41.139,
+    "planned_count": 0,
+    "oracle_count": 3,
+    "delta_sl": 3,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/track/{id}"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/following"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/track/{id}"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/following"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: find song 'When You Believe' → get artists → follow them | MAP: spotify / GET /me/top/tracks (no search endpoint exists) | CHAIN: none | COMBINE: single task | FILTER: none | VALIDATE: ✗ No search endpoint for songs in Spotify catalog; cannot identify song ID or artists by name. Only top tracks or currently playing are available. Request cannot be fulfilled.",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 41,
+    "query": "Skip to the next track",
+    "oracle": [
+      "POST /me/player/next"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 25.075,
+    "total_latency_s": 40.931,
+    "planned_count": 1,
+    "oracle_count": 1,
+    "delta_sl": 0,
+    "is_correct_path": true,
+    "step_recall": 1.0,
+    "step_precision": 1.0,
+    "step_f1": 1.0,
+    "step_missed": [],
+    "tasks_successful": true,
+    "matches": [
+      {
+        "planned": [
+          "POST",
+          "/me/player/next"
+        ],
+        "oracle": [
+          "POST",
+          "/me/player/next"
+        ]
+      }
+    ],
+    "mismatches": [],
+    "oracle_missed": [],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: skip to next track | MAP: spotify / POST /me/player/next | CHAIN: none | COMBINE: single task | FILTER: none | VALIDATE: ✓",
+      "tasks": [
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/player/next",
+          "input": "",
+          "operation": "POST",
+          "service_id": "spotify",
+          "task_name": "skip_to_next_track",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/player/next",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/player/next"
+        }
+      ]
+    },
+    "execution_results": [
+      {
+        "task_name": "skip_to_next_track",
+        "operation": "POST",
+        "status": "SUCCESS",
+        "status_code": 204
+      }
+    ]
+  },
+  {
+    "query_index": 42,
+    "query": "Play my playlist 'My Rock'",
+    "oracle": [
+      "GET /me/playlists",
+      "PUT /me/player/play"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 25.527,
+    "total_latency_s": 42.992,
+    "planned_count": 0,
+    "oracle_count": 2,
+    "delta_sl": 2,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/playlists"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/player/play"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/playlists"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/player/play"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: play playlist 'My Rock' | MAP: spotify / POST /me/player/play | CHAIN: none | COMBINE: single task | FILTER: none | VALIDATE: ✗ No service endpoint exists to search for playlists by name or retrieve a playlist URI. The catalog only provides endpoints to create playlists, get album tracks, get track details, and control playback (next, pause, play) but lacks a 'search playlists' or 'get playlist' endpoint. The 'play' endpoint requires a context_uri or uris, which cannot be derived from the available services given only a playlist name.",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 43,
+    "query": "Clear my music library and cancel all following singers",
+    "oracle": [
+      "GET /me/tracks",
+      "DELETE /me/tracks",
+      "GET /me/following",
+      "DELETE /me/following"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 29.418,
+    "total_latency_s": 46.505,
+    "planned_count": 3,
+    "oracle_count": 4,
+    "delta_sl": 1,
+    "is_correct_path": false,
+    "step_recall": 0.5,
+    "step_precision": 0.6667,
+    "step_f1": 0.5714,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/tracks"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/me/following"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": true,
+    "matches": [
+      {
+        "planned": [
+          "DELETE",
+          "/me/tracks"
+        ],
+        "oracle": [
+          "DELETE",
+          "/me/tracks"
+        ]
+      },
+      {
+        "planned": [
+          "DELETE",
+          "/me/following"
+        ],
+        "oracle": [
+          "DELETE",
+          "/me/following"
+        ]
+      }
+    ],
+    "mismatches": [
+      {
+        "planned": [
+          "DELETE",
+          "/me/albums"
+        ],
+        "oracle": null
+      }
+    ],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/tracks"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/me/following"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: remove all albums, remove all tracks, unfollow all artists | MAP: spotify DELETE /me/albums, DELETE /me/tracks, DELETE /me/following | CHAIN: none | COMBINE: single task (multiple independent deletions) | FILTER: no filters required | VALIDATE: ✓",
+      "tasks": [
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/albums",
+          "input": "",
+          "operation": "DELETE",
+          "service_id": "spotify",
+          "task_name": "remove_all_albums",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/albums",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/albums"
+        },
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/tracks",
+          "input": "",
+          "operation": "DELETE",
+          "service_id": "spotify",
+          "task_name": "remove_all_tracks",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/tracks",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/tracks"
+        },
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/following",
+          "input": "",
+          "operation": "DELETE",
+          "service_id": "spotify",
+          "task_name": "unfollow_all_artists",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/following",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/following"
+        }
+      ]
+    },
+    "execution_results": [
+      {
+        "task_name": "remove_all_albums",
+        "operation": "DELETE",
+        "status": "SUCCESS",
+        "status_code": 204
+      },
+      {
+        "task_name": "remove_all_tracks",
+        "operation": "DELETE",
+        "status": "SUCCESS",
+        "status_code": 204
+      },
+      {
+        "task_name": "unfollow_all_artists",
+        "operation": "DELETE",
+        "status": "SUCCESS",
+        "status_code": 204
+      }
+    ]
+  },
+  {
+    "query_index": 44,
+    "query": "Create a new playlist and name it Quiet",
+    "oracle": [
+      "GET /me",
+      "POST /users/{user_id}/playlists"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 24.758,
+    "total_latency_s": 41.2,
+    "planned_count": 0,
+    "oracle_count": 2,
+    "delta_sl": 2,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "POST",
+          "/users/{user_id}/playlists"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "POST",
+          "/users/{user_id}/playlists"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: create a new playlist named 'Quiet' | MAP: spotify / POST /users/{user_id}/playlists | CHAIN: none | COMBINE: single task | FILTER: name='Quiet', public=false (default), description='' (default) | VALIDATE: ✗ missing required parameter user_id; catalog requires user_id in path, user did not provide it; cannot invent user_id",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 45,
+    "query": "Turn down the volume to 20",
+    "oracle": [
+      "PUT /me/player/volume"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 22.697,
+    "total_latency_s": 38.815,
+    "planned_count": 1,
+    "oracle_count": 1,
+    "delta_sl": 0,
+    "is_correct_path": true,
+    "step_recall": 1.0,
+    "step_precision": 1.0,
+    "step_f1": 1.0,
+    "step_missed": [],
+    "tasks_successful": true,
+    "matches": [
+      {
+        "planned": [
+          "PUT",
+          "/me/player/volume"
+        ],
+        "oracle": [
+          "PUT",
+          "/me/player/volume"
+        ]
+      }
+    ],
+    "mismatches": [],
+    "oracle_missed": [],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: set volume to 20 | MAP: spotify / PUT /me/player/volume | CHAIN: none | COMBINE: single task | FILTER: volume_percent=20 | VALIDATE: ✓",
+      "tasks": [
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/player/volume?volume_percent=20",
+          "input": "",
+          "operation": "PUT",
+          "service_id": "spotify",
+          "task_name": "set_volume_to_20",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/player/volume?volume_percent=20",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/player/volume?volume_percent=20"
+        }
+      ]
+    },
+    "execution_results": [
+      {
+        "task_name": "set_volume_to_20",
+        "operation": "PUT",
+        "status": "SUCCESS",
+        "status_code": 204
+      }
+    ]
+  },
+  {
+    "query_index": 46,
+    "query": "Set the single track repeat mode",
+    "oracle": [
+      "PUT /me/player/repeat"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 24.834,
+    "total_latency_s": 40.789,
+    "planned_count": 1,
+    "oracle_count": 1,
+    "delta_sl": 0,
+    "is_correct_path": true,
+    "step_recall": 1.0,
+    "step_precision": 1.0,
+    "step_f1": 1.0,
+    "step_missed": [],
+    "tasks_successful": true,
+    "matches": [
+      {
+        "planned": [
+          "PUT",
+          "/me/player/repeat"
+        ],
+        "oracle": [
+          "PUT",
+          "/me/player/repeat"
+        ]
+      }
+    ],
+    "mismatches": [],
+    "oracle_missed": [],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: set repeat mode to single track | MAP: spotify / PUT /me/player/repeat | CHAIN: none | COMBINE: single task | FILTER: state=track | VALIDATE: ✓",
+      "tasks": [
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/player/repeat?state=track",
+          "input": "",
+          "operation": "PUT",
+          "service_id": "spotify",
+          "task_name": "set_repeat_track",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/player/repeat?state=track",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/player/repeat?state=track"
+        }
+      ]
+    },
+    "execution_results": [
+      {
+        "task_name": "set_repeat_track",
+        "operation": "PUT",
+        "status": "SUCCESS",
+        "status_code": 204
+      }
+    ]
+  },
+  {
+    "query_index": 47,
+    "query": "Pause playback, increase volume to 80 and switch to the next song",
+    "oracle": [
+      "PUT /me/player/pause",
+      "PUT /me/player/volume",
+      "POST /me/player/next"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 29.529,
+    "total_latency_s": 47.012,
+    "planned_count": 3,
+    "oracle_count": 3,
+    "delta_sl": 0,
+    "is_correct_path": true,
+    "step_recall": 1.0,
+    "step_precision": 1.0,
+    "step_f1": 1.0,
+    "step_missed": [],
+    "tasks_successful": true,
+    "matches": [
+      {
+        "planned": [
+          "PUT",
+          "/me/player/pause"
+        ],
+        "oracle": [
+          "PUT",
+          "/me/player/pause"
+        ]
+      },
+      {
+        "planned": [
+          "PUT",
+          "/me/player/volume"
+        ],
+        "oracle": [
+          "PUT",
+          "/me/player/volume"
+        ]
+      },
+      {
+        "planned": [
+          "POST",
+          "/me/player/next"
+        ],
+        "oracle": [
+          "POST",
+          "/me/player/next"
+        ]
+      }
+    ],
+    "mismatches": [],
+    "oracle_missed": [],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: pause playback, set volume to 80, skip to next track | MAP: spotify / PUT /me/player/pause, PUT /me/player/volume, POST /me/player/next | CHAIN: none | COMBINE: single task (multiple independent actions) | FILTER: volume_percent=80 | VALIDATE: ✓",
+      "tasks": [
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/player/pause",
+          "input": "",
+          "operation": "PUT",
+          "service_id": "spotify",
+          "task_name": "pause_playback",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/player/pause",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/player/pause"
+        },
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/player/volume?volume_percent=80",
+          "input": "",
+          "operation": "PUT",
+          "service_id": "spotify",
+          "task_name": "set_volume",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/player/volume?volume_percent=80",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/player/volume?volume_percent=80"
+        },
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/player/next",
+          "input": "",
+          "operation": "POST",
+          "service_id": "spotify",
+          "task_name": "skip_to_next",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/player/next",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/player/next"
+        }
+      ]
+    },
+    "execution_results": [
+      {
+        "task_name": "pause_playback",
+        "operation": "PUT",
+        "status": "SUCCESS",
+        "status_code": 204
+      },
+      {
+        "task_name": "set_volume",
+        "operation": "PUT",
+        "status": "SUCCESS",
+        "status_code": 204
+      },
+      {
+        "task_name": "skip_to_next",
+        "operation": "POST",
+        "status": "SUCCESS",
+        "status_code": 204
+      }
+    ]
+  },
+  {
+    "query_index": 48,
+    "query": "Play the newest album of BIGBANG",
+    "oracle": [
+      "GET /search",
+      "GET /artists/{id}/albums",
+      "PUT /me/player/play"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 23.037,
+    "total_latency_s": 40.001,
+    "planned_count": 0,
+    "oracle_count": 3,
+    "delta_sl": 3,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/artists/{id}/albums"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/player/play"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/artists/{id}/albums"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/player/play"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: find BIGBANG artist ID, get their albums, identify newest, play tracks | MAP: spotify / GET /artists/{id}/albums (requires ID) | CHAIN: none | COMBINE: single task | FILTER: none | VALIDATE: No search endpoint exists in catalog to resolve 'BIGBANG' to an ID. Cannot satisfy request.",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 49,
+    "query": "Follow the artist of the album Mojito",
+    "oracle": [
+      "GET /search",
+      "GET /albums/{id}",
+      "PUT /me/following"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 24.339,
+    "total_latency_s": 40.95,
+    "planned_count": 0,
+    "oracle_count": 3,
+    "delta_sl": 3,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/albums/{id}"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/following"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/albums/{id}"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/following"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: find album 'Mojito' -> get artist ID -> follow artist | MAP: no service in catalog provides album search or album-to-artist mapping | CHAIN: none | COMBINE: single task | FILTER: N/A | VALIDATE: ✗ No service can search for albums or resolve artist IDs from album titles. Spotify requires artist ID for following, but no endpoint exists to find the artist of 'Mojito'.",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 50,
+    "query": "Play the third song from my music library and set the single track repeat mode",
+    "oracle": [
+      "GET /me/tracks",
+      "GET /tracks/{id}",
+      "PUT /me/player/play",
+      "PUT /me/player/repeat"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 24.495,
+    "total_latency_s": 41.453,
+    "planned_count": 0,
+    "oracle_count": 4,
+    "delta_sl": 4,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/tracks"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/tracks/{id}"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/player/play"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/player/repeat"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/tracks"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/tracks/{id}"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/player/play"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/player/repeat"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: retrieve user's music library tracks, identify the third track, play it, set repeat mode to 'track' | MAP: spotify / PUT /me/player/play + PUT /me/player/repeat | CHAIN: none (no GET endpoint exists to list tracks; cannot derive track URI) | COMBINE: single task | FILTER: N/A | VALIDATE: ✗ No GET endpoint available to list user's tracks; cannot identify 'third song'.",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 51,
+    "query": "Create a new playlist named 'BIGBANG' and add a song of BIGBANG to it",
+    "oracle": [
+      "GET /me",
+      "POST /users/{user_id}/playlists",
+      "GET /search",
+      "POST /playlists/{playlist_id}/tracks"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 22.259,
+    "total_latency_s": 40.12,
+    "planned_count": 0,
+    "oracle_count": 4,
+    "delta_sl": 4,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "POST",
+          "/users/{user_id}/playlists"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "POST",
+          "/playlists/{playlist_id}/tracks"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "POST",
+          "/users/{user_id}/playlists"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "POST",
+          "/playlists/{playlist_id}/tracks"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: create playlist 'BIGBANG', find BIGBANG song URI, add song to playlist | MAP: spotify / POST /users/{user_id}/playlists + spotify / POST /playlists/{playlist_id}/tracks | CHAIN: add_tracks playlist_id ← create_playlist.id | COMBINE: chain: add_song_to_playlist consumes create_playlist via JMESPath | FILTER: user_id required but not provided in query; cannot proceed without user_id | VALIDATE: ✗ missing required parameter user_id for playlist creation",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 52,
+    "query": "Delete all songs from my first playlist",
+    "oracle": [
+      "GET /me/playlists",
+      "GET /playlists/{playlist_id}",
+      "DELETE /playlists/{playlist_id}/tracks"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 21.143,
+    "total_latency_s": 37.766,
+    "planned_count": 0,
+    "oracle_count": 3,
+    "delta_sl": 3,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/playlists"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/playlists/{playlist_id}"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "DELETE",
+          "/playlists/{playlist_id}/tracks"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/playlists"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "GET",
+          "/playlists/{playlist_id}"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "DELETE",
+          "/playlists/{playlist_id}/tracks"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: find first playlist ID, then delete all tracks from it | MAP: spotify / GET /me/playlists (not in catalog) | CHAIN: none | COMBINE: single task | FILTER: none | VALIDATE: ✗ No GET /me/playlists endpoint exists in catalog to retrieve playlist IDs. Cannot identify 'first playlist'.",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 53,
+    "query": "Make my first playlist private",
+    "oracle": [
+      "GET /me/playlists",
+      "GET /playlists/{playlist_id}",
+      "PUT /playlists/{playlist_id}"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 29.787,
+    "total_latency_s": 46.701,
+    "planned_count": 2,
+    "oracle_count": 3,
+    "delta_sl": 1,
+    "is_correct_path": false,
+    "step_recall": 0.6667,
+    "step_precision": 1.0,
+    "step_f1": 0.8,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/playlists/{playlist_id}"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": true,
+    "matches": [
+      {
+        "planned": [
+          "GET",
+          "/me/playlists"
+        ],
+        "oracle": [
+          "GET",
+          "/me/playlists"
+        ]
+      },
+      {
+        "planned": [
+          "PUT",
+          "/playlists/{ph}"
+        ],
+        "oracle": [
+          "PUT",
+          "/playlists/{playlist_id}"
+        ]
+      }
+    ],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/playlists/{playlist_id}"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: get user playlists, find the first one, update its visibility to private | MAP: spotify / GET /me/playlists + PUT /playlists/{playlist_id} | CHAIN: PUT path ← get_my_playlists.items[0].id | COMBINE: chain: update_playlist consumes get_my_playlists via JMESPath | FILTER: none (first item) | VALIDATE: ✓",
+      "tasks": [
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/playlists",
+          "input": "",
+          "operation": "GET",
+          "service_id": "spotify",
+          "task_name": "get_my_playlists",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/playlists",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/playlists"
+        },
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/playlists/3c4d5e6f7g8h9i0j1k2l",
+          "input": {
+            "description": "",
+            "name": "",
+            "public": false
+          },
+          "operation": "PUT",
+          "service_id": "spotify",
+          "task_name": "update_playlist",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/playlists/{{get_my_playlists.items[0].id}}",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/playlists/3c4d5e6f7g8h9i0j1k2l"
+        }
+      ]
+    },
+    "execution_results": [
+      {
+        "task_name": "get_my_playlists",
+        "operation": "GET",
+        "status": "SUCCESS",
+        "status_code": 200
+      },
+      {
+        "task_name": "update_playlist",
+        "operation": "PUT",
+        "status": "SUCCESS",
+        "status_code": 200
+      }
+    ]
+  },
+  {
+    "query_index": 54,
+    "query": "Add album Mojito to my music library",
+    "oracle": [
+      "GET /search",
+      "PUT /me/albums"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 24.456,
+    "total_latency_s": 41.408,
+    "planned_count": 0,
+    "oracle_count": 2,
+    "delta_sl": 2,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/albums"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/search"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/albums"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: find album 'Mojito' ID, then save to library | MAP: tmdb / GET /search/movie (no album endpoint in catalog) | CHAIN: none | COMBINE: single task | FILTER: N/A | VALIDATE: ✗ No service in catalog provides album search or library save for music albums. Spotify endpoints exist for tracks and albums but require IDs as input, not search by name. TMDB is for movies. Cannot fulfill request.",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 55,
+    "query": "Add the first song from my music library to the playback queue and enable single song repeat mode",
+    "oracle": [
+      "GET /me/tracks",
+      "POST /me/player/queue",
+      "PUT /me/player/repeat"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 20.959,
+    "total_latency_s": 38.699,
+    "planned_count": 0,
+    "oracle_count": 3,
+    "delta_sl": 3,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/tracks"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "POST",
+          "/me/player/queue"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/player/repeat"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me/tracks"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "POST",
+          "/me/player/queue"
+        ],
+        "planned": null
+      },
+      {
+        "oracle": [
+          "PUT",
+          "/me/player/repeat"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: user wants to add a song from their library and enable repeat mode | MAP: spotify / POST /me/player/queue + PUT /me/player/repeat | CHAIN: none | COMBINE: single task | FILTER: none | VALIDATE: No service endpoint exists to retrieve 'my music library' or list user-owned tracks. The catalog only provides queue management and playback control, not library discovery. Cannot satisfy 'first song from my music library' without a library listing endpoint.",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 56,
+    "query": "What is my user name?",
+    "oracle": [
+      "GET /me"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 20.333,
+    "total_latency_s": 36.734,
+    "planned_count": 0,
+    "oracle_count": 1,
+    "delta_sl": 1,
+    "is_correct_path": false,
+    "step_recall": 0.0,
+    "step_precision": 0.0,
+    "step_f1": 0.0,
+    "step_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me"
+        ],
+        "planned": null
+      }
+    ],
+    "tasks_successful": false,
+    "matches": [],
+    "mismatches": [],
+    "oracle_missed": [
+      {
+        "oracle": [
+          "GET",
+          "/me"
+        ],
+        "planned": null
+      }
+    ],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: user name of current authenticated user | MAP: no endpoint in catalog returns user profile or display name | CHAIN: none | COMBINE: single task | FILTER: N/A | VALIDATE: No available service can fulfil this request.",
+      "tasks": []
+    },
+    "execution_results": []
+  },
+  {
+    "query_index": 57,
+    "query": "Pause the player",
+    "oracle": [
+      "PUT /me/player/pause"
+    ],
+    "error": "",
+    "http_status": 200,
+    "planning_latency_s": 24.923,
+    "total_latency_s": 41.875,
+    "planned_count": 1,
+    "oracle_count": 1,
+    "delta_sl": 0,
+    "is_correct_path": true,
+    "step_recall": 1.0,
+    "step_precision": 1.0,
+    "step_f1": 1.0,
+    "step_missed": [],
+    "tasks_successful": true,
+    "matches": [
+      {
+        "planned": [
+          "PUT",
+          "/me/player/pause"
+        ],
+        "oracle": [
+          "PUT",
+          "/me/player/pause"
+        ]
+      }
+    ],
+    "mismatches": [],
+    "oracle_missed": [],
+    "execution_plan": {
+      "reasoning": "DECOMPOSE: pause current playback | MAP: spotify / PUT /me/player/pause | CHAIN: none | COMBINE: single task | FILTER: none | VALIDATE: ✓",
+      "tasks": [
+        {
+          "endpoint": "http://mock-server:8080/rest/Spotify/1.0/me/player/pause",
+          "input": "",
+          "operation": "PUT",
+          "service_id": "spotify",
+          "task_name": "pause_player",
+          "url": "http://mock-server:8080/rest/Spotify/1.0/me/player/pause",
+          "url_resolved": "http://mock-server:8080/rest/Spotify/1.0/me/player/pause"
+        }
+      ]
+    },
+    "execution_results": [
+      {
+        "task_name": "pause_player",
+        "operation": "PUT",
+        "status": "SUCCESS",
+        "status_code": 204
+      }
+    ]
+  }
+]

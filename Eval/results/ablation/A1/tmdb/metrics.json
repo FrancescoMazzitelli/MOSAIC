@@ -1,0 +1,23 @@
+{
+  "dataset": "tmdb",
+  "total_queries": 100,
+  "success_rate_s": 46.0,
+  "correct_path_rate_cp": 27.0,
+  "avg_delta_sl": 1.2,
+  "avg_step_recall": 0.4125,
+  "avg_step_precision": 0.4578,
+  "avg_step_f1": 0.4257,
+  "avg_planning_latency_s": 26.739,
+  "avg_total_latency_s": 44.027,
+  "p50_planning_latency_s": 26.225,
+  "p95_planning_latency_s": 33.604,
+  "successful_queries": 46,
+  "correct_path_queries": 27,
+  "http_status_distribution": {
+    "200": 100
+  },
+  "http_error_count": 0,
+  "model": "unknown",
+  "run_id": "20261102_112552",
+  "control_url": "http://localhost:5500"
+}

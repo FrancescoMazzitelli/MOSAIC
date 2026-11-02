@@ -1,0 +1,28 @@
+================================================================
+  POLLEN Test Runner — Summary
+  Run: tmdb_unknown_20261102_145447
+  Dataset: tmdb
+================================================================
+
+  Total queries:       100
+  Successful (S):      73
+  Correct path (CP):   72
+  HTTP errors (4xx/5xx): 0
+
+  Success Rate (S%):         73.00%
+  Correct Path Rate (CP%):   72.00%
+  Avg Δ Solution Length:     0.56
+
+  Step-level (diagnostic, non-canonical):
+    Avg Step Recall:    0.807
+    Avg Step Precision: 0.766
+    Avg Step F1:        0.779
+  HTTP Status Distribution:  {'200': 100}
+
+  Latency (planning):
+    Average:  15.225 s
+    P50:      14.131 s
+    P95:      23.384 s
+
+  Latency (total):
+    Average:  17.588 s

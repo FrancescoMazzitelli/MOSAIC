@@ -1,0 +1,28 @@
+================================================================
+  POLLEN Test Runner — Summary
+  Run: spotify_unknown_20261102_112552
+  Dataset: spotify
+================================================================
+
+  Total queries:       57
+  Successful (S):      25
+  Correct path (CP):   13
+  HTTP errors (4xx/5xx): 0
+
+  Success Rate (S%):         43.86%
+  Correct Path Rate (CP%):   22.81%
+  Avg Δ Solution Length:     1.63
+
+  Step-level (diagnostic, non-canonical):
+    Avg Step Recall:    0.358
+    Avg Step Precision: 0.414
+    Avg Step F1:        0.378
+  HTTP Status Distribution:  {'200': 57}
+
+  Latency (planning):
+    Average:  25.510 s
+    P50:      24.624 s
+    P95:      34.268 s
+
+  Latency (total):
+    Average:  42.536 s

@@ -1,0 +1,23 @@
+{
+  "dataset": "spotify",
+  "total_queries": 57,
+  "success_rate_s": 43.86,
+  "correct_path_rate_cp": 22.81,
+  "avg_delta_sl": 1.63,
+  "avg_step_recall": 0.3582,
+  "avg_step_precision": 0.4137,
+  "avg_step_f1": 0.3775,
+  "avg_planning_latency_s": 25.51,
+  "avg_total_latency_s": 42.536,
+  "p50_planning_latency_s": 24.624,
+  "p95_planning_latency_s": 34.268,
+  "successful_queries": 25,
+  "correct_path_queries": 13,
+  "http_status_distribution": {
+    "200": 57
+  },
+  "http_error_count": 0,
+  "model": "unknown",
+  "run_id": "20261102_112552",
+  "control_url": "http://localhost:5500"
+}

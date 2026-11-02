@@ -44,8 +44,8 @@ services:
       api-importer:
         condition: service_started
     volumes:
-      - ./MOCKS-smart-city/apis:/apis
-      - ./MOCKS-smart-city/scripts:/scripts
+      - ./Eval/service-mocks/apis:/apis
+      - ./Eval/service-mocks/scripts:/scripts
       # - ./Eval/service-mocks/apis:/apis
       # - ./Eval/service-mocks/scripts:/scripts
       - ./deploy.sh:/deploy.sh:ro
@@ -61,12 +61,12 @@ services:
         curl -L -o /tmp/jq https://github.com/stedolan/jq/releases/latest/download/jq-linux64
         chmod +x /tmp/jq
 
-        /deploy.sh
+        sh /deploy.sh
 
         echo "Waiting 15 seconds before running register.sh..."
         sleep 15
 
-        /register.sh
+        sh /register.sh
 
         echo "Triggering API schema enrichment..."
         # Ciclo di retry: prova ogni 3 secondi finché api-importer non risponde con successo
@@ -189,7 +189,7 @@ services:
       - MOCK_SERVER_URL=http://mock-server:8080
       - BACKEND_MODE=${BACKEND_MODE:-MOCK}
       - API_AUTH_HEADERS=${API_AUTH_HEADERS:-}
-      - PLANNER_SYSTEM_PROMPT_PATH=/app/config/prompts/planner_system.md
+      - PLANNER_SYSTEM_PROMPT_PATH=/app/config/prompts/planner_runner.md
       - PLANNER_OUTPUT_SCHEMA_PATH=/app/config/schemas/plan_output.json
     stop_grace_period: 10s
     depends_on:
