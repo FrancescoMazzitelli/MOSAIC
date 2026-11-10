@@ -76,40 +76,39 @@ class Designer:
 
         Le sezioni di design si applicano SOLO quando category == OUT_OF_DOMAIN.
         """
-        # Esempio di contratto progettato: dominio (energy) volutamente
+        # Esempio di contratto progettato: dominio (museum loans) volutamente
         # diverso da quelli reali del progetto, per evitare imitazione.
         contract_example = {
             "rationale": (
-                "GAP: user asks for per-building energy consumption | "
-                "CATALOG: environment sensors, logistics warehouses, hospital wards — no energy data | "
-                "MISSING: no endpoint returns kWh readings per building | "
-                "PROPOSAL: smart-building-energy-mock with GET /building-meter"
+                "GAP: user asks for museum artifact loan history | "
+                "CATALOG: city traffic, environment, parking, tourism services — no museum loan data | "
+                "MISSING: no endpoint returns artifact loan records | "
+                "PROPOSAL: smart-museum-loan-mock with GET /loan-record"
             ),
-            "service_name": "Smart Building Energy API",
-            "service_id": "smart-building-energy-mock",
+            "service_name": "Smart Museum Loan API",
+            "service_id": "smart-museum-loan-mock",
             "description": (
-                "Exposes real-time and historical energy consumption data per building, "
-                "reusing the zoneId convention of the existing catalog so it can be "
-                "joined with environment and logistics services."
+                "Exposes museum artifact loan records, reusing the zoneId convention "
+                "of the existing catalog so loans can be joined with city services."
             ),
             "suggested_endpoints": [
                 {
                     "method": "GET",
-                    "path": "/building-meter",
-                    "purpose": "List buildings with their latest kWh reading and alert flag.",
-                    "parameters": "zoneId(Z-NORD,Z-SUD,Z-EST,Z-OVEST), alertActive(true,false)",
+                    "path": "/loan-record",
+                    "purpose": "List artifact loans with borrower and due date.",
+                    "parameters": "zoneId(Z-NORD,Z-SUD,Z-EST,Z-OVEST), status(active,returned)",
                     "request_schema": "",
-                    "response_schema": "{buildingId:str, zoneId:str, kWhLast24h:float, alertActive:bool, lastReadingAt:str}"
+                    "response_schema": "{loanId:str, artifactId:str, zoneId:str, borrower:str, dueAt:str, status:str}"
                 }
             ],
             "integration_notes": (
-                "Uses the same zoneId enum as smart-environment-sensors so SQL "
-                "joins on zoneId are trivial."
+                "Uses the same zoneId enum as smart-environment-and-temperature-sensors-mock "
+                "so SQL joins on zoneId are trivial."
             )
         }
         ood_example = {
             "category": "OUT_OF_DOMAIN",
-            "justification": "Catalog has no service exposing book/library data.",
+            "justification": "Catalog has no service exposing museum loan records.",
             "service_contract": contract_example,
         }
         amb_example = {
@@ -421,6 +420,21 @@ Classify and, if the category is OUT_OF_DOMAIN, design the missing service."""
         url = os.environ.get("OLLAMA_API_URL", "http://localhost:11434")
 
         try:
+            temperature = float(os.environ.get("DESIGNER_TEMPERATURE", "0.2"))
+        except ValueError:
+            temperature = 0.2
+        options = {
+            "temperature": temperature,  # leggera creativita' solo per il design
+            "num_ctx":     int(os.environ.get("DESIGNER_NUM_CTX", "16384")),
+        }
+        seed_raw = os.environ.get("DESIGNER_SEED", "").strip()
+        if seed_raw:
+            try:
+                options["seed"] = int(seed_raw)
+            except ValueError:
+                print(f"[DESIGNER WARN] DESIGNER_SEED non numerico: {seed_raw!r}")
+
+        try:
             t0 = time.perf_counter()
             response = requests.post(
                 f"{url}/api/chat",
@@ -432,10 +446,7 @@ Classify and, if the category is OUT_OF_DOMAIN, design the missing service."""
                         {"role": "user",   "content": user_prompt},
                     ],
                     "think":   False,
-                    "options": {
-                        "temperature": 0.2,    # leggera creativita' solo per il design
-                        "num_ctx":     int(os.environ.get("DESIGNER_NUM_CTX", "16384")),
-                    },
+                    "options": options,
                     "stream":  False,
                 },
                 timeout=60,

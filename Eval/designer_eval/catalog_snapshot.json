@@ -1,0 +1,482 @@
+{
+  "fetched_at": "2026-11-09T11:13:47",
+  "source": "http://localhost:5000/services",
+  "http_status": 200,
+  "services": [
+    {
+      "_id": "smart-bins-mock",
+      "name": "smart-bins-api-mock",
+      "description": "API for managing connected waste bins in urban areas. Supports creation, lookup, update, and deletion of waste bins, as well as real-time monitoring of fill levels, collection history, and bin status. Supports filtering by standardized city zones (zoneId), bin type, and operational status, enabling cross-domain orchestration such as prioritizing waste collection in zones with active events or high pedestrian density.",
+      "capabilities": {
+        "GET /health": "Health check endpoint to verify that the Smart Bins microservice is reachable and responsive.",
+        "GET /bin": "Retrieve the list of smart waste bins registered in the city. Use query parameters to filter by zone, status or bin type - for example, to find all overflowing bins in Z-CENTRO or all organic bins requiring collection.\n\n**Mock constraint — one filter per request**: this mock dispatcher resolves a single query parameter at a time. Combining multiple query parameters is NOT supported — only the primary dispatcher parameter is matched. Issue separate requests for each filter and merge results client-side.",
+        "POST /bin": "Register a new smart waste bin in the city waste management system.",
+        "GET /bin/{id}": "Retrieve the current status of a specific waste bin by ID.",
+        "PUT /bin/{id}": "Update the status of a specific smart waste bin by ID.",
+        "DELETE /bin/{id}": "Permanently remove a specific waste bin from the city registry.",
+        "POST /register": "Register this microservice with the central discovery system (Consul)."
+      },
+      "endpoints": {
+        "GET /health": "http://localhost:8585/rest/Smart+Bins+API/1.0/health",
+        "GET /bin": "http://localhost:8585/rest/Smart+Bins+API/1.0/bin",
+        "POST /bin": "http://localhost:8585/rest/Smart+Bins+API/1.0/bin",
+        "GET /bin/{id}": "http://localhost:8585/rest/Smart+Bins+API/1.0/bin/{id}",
+        "PUT /bin/{id}": "http://localhost:8585/rest/Smart+Bins+API/1.0/bin/{id}",
+        "DELETE /bin/{id}": "http://localhost:8585/rest/Smart+Bins+API/1.0/bin/{id}",
+        "POST /register": "http://localhost:8585/rest/Smart+Bins+API/1.0/register"
+      },
+      "generated_description": "Smart Bins API. Health check. Search bins. Register new bin. Get bin details by ID. Update bin details by ID. Delete bin by ID. Register service with discovery system. zoneId: Z-CENTRO, Z-NORD, Z-SUD, Z-EST, Z-OVEST. status: normal, full, overflowing, maintenance, offline. binType: general, recyclable, organic, glass, electronic",
+      "parameters": {
+        "GET /bin": "{zoneId:enum(Z-CENTRO,Z-NORD,Z-SUD,Z-EST,Z-OVEST), status:enum(normal,full,overflowing,maintenance,offline), binType:enum(general,recyclable,organic,glass,electronic)}",
+        "GET /bin/{id}": "{id:int*}",
+        "PUT /bin/{id}": "{id:int*}",
+        "DELETE /bin/{id}": "{id:int*}"
+      },
+      "request_schemas": {
+        "POST /bin": "{zoneId:str*, location:str*, fillLevel:int*, lastEmptied:str*, nextCollection:str*, binType:enum*, sensorBattery:int*, status:enum*}",
+        "PUT /bin/{id}": "{zoneId:str*, location:str*, fillLevel:int*, lastEmptied:str*, nextCollection:str*, binType:enum*, sensorBattery:int*, status:enum*}"
+      },
+      "response_schemas": {
+        "GET /bin": "[{zoneId:str, location:str, fillLevel:int, lastEmptied:str, nextCollection:str, binType:enum, sensorBattery:int, status:enum, id:int}]",
+        "POST /bin": "{zoneId:str, location:str, fillLevel:int, lastEmptied:str, nextCollection:str, binType:enum, sensorBattery:int, status:enum, id:int}",
+        "GET /bin/{id}": "{zoneId:str, location:str, fillLevel:int, lastEmptied:str, nextCollection:str, binType:enum, sensorBattery:int, status:enum, id:int}",
+        "PUT /bin/{id}": "{zoneId:str, location:str, fillLevel:int, lastEmptied:str, nextCollection:str, binType:enum, sensorBattery:int, status:enum, id:int}",
+        "POST /register": "{status:str, httpCode:int, message:str}"
+      }
+    },
+    {
+      "_id": "smart-buildings-mock",
+      "name": "smart-buildings-api-mock",
+      "description": "API for managing building data and facilities in the city. Supports creation, lookup, update, and deletion of building entries, including occupancy, energy usage, CO2 emissions, and structural metadata. Supports filtering by standardized city zones (zoneId), building type, and operational status, enabling cross-domain orchestration such as identifying high energy-consumption buildings in a zone with active pollution alerts, or finding evacuated buildings during emergencies.",
+      "capabilities": {
+        "GET /health": "Health check endpoint to verify that the Smart Buildings API service is running and responsive.",
+        "GET /building": "Retrieve the list of registered city buildings. Use query parameters to filter by zone, building type, or operational status - for example, to find all healthcare buildings in Z-NORD, or all evacuated buildings during an emergency, or all buildings currently in maintenance.\n\n**Mock constraint — one filter per request**: this mock dispatcher resolves a single query parameter at a time. Combining multiple query parameters is NOT supported — only the primary dispatcher parameter is matched. Issue separate requests for each filter and merge results client-side.",
+        "POST /building": "Register a new building in the city infrastructure system.",
+        "GET /building/{id}": "Retrieve full details of a specific building by ID.",
+        "PUT /building/{id}": "Update the data of a specific building by ID.",
+        "DELETE /building/{id}": "Permanently remove a specific building from the city registry.",
+        "POST /register": "Register this microservice with the central discovery system (Consul)."
+      },
+      "endpoints": {
+        "GET /health": "http://localhost:8585/rest/Smart+Buildings+API/1.0/health",
+        "GET /building": "http://localhost:8585/rest/Smart+Buildings+API/1.0/building",
+        "POST /building": "http://localhost:8585/rest/Smart+Buildings+API/1.0/building",
+        "GET /building/{id}": "http://localhost:8585/rest/Smart+Buildings+API/1.0/building/{id}",
+        "PUT /building/{id}": "http://localhost:8585/rest/Smart+Buildings+API/1.0/building/{id}",
+        "DELETE /building/{id}": "http://localhost:8585/rest/Smart+Buildings+API/1.0/building/{id}",
+        "POST /register": "http://localhost:8585/rest/Smart+Buildings+API/1.0/register"
+      },
+      "generated_description": "Smart Buildings API. Health check. Search buildings. Register new building. Get building details by ID. Update building details by ID. Delete building by ID. Register service with discovery system. zoneId: Z-CENTRO, Z-NORD, Z-SUD, Z-EST, Z-OVEST. status: operational, maintenance, closed, evacuated. buildingType: office, residential, public, commercial, industrial, healthcare, education",
+      "parameters": {
+        "GET /building": "{zoneId:enum(Z-CENTRO,Z-NORD,Z-SUD,Z-EST,Z-OVEST), status:enum(operational,maintenance,closed,evacuated), buildingType:enum(office,residential,public,commercial,industrial,healthcare,education)}",
+        "GET /building/{id}": "{id:int*}",
+        "PUT /building/{id}": "{id:int*}",
+        "DELETE /building/{id}": "{id:int*}"
+      },
+      "request_schemas": {
+        "POST /building": "{zoneId:str*, name:str*, address:str*, buildingType:enum*, floors:int*, occupancy:int*, maxCapacity:int*, energyUsage:float*, co2Emissions:float*, status:enum*}",
+        "PUT /building/{id}": "{zoneId:str*, name:str*, address:str*, buildingType:enum*, floors:int*, occupancy:int*, maxCapacity:int*, energyUsage:float*, co2Emissions:float*, status:enum*}"
+      },
+      "response_schemas": {
+        "GET /building": "[{zoneId:str, name:str, address:str, buildingType:enum, floors:int, occupancy:int, maxCapacity:int, energyUsage:float, co2Emissions:float, status:enum, id:int}]",
+        "POST /building": "{zoneId:str, name:str, address:str, buildingType:enum, floors:int, occupancy:int, maxCapacity:int, energyUsage:float, co2Emissions:float, status:enum, id:int}",
+        "GET /building/{id}": "{zoneId:str, name:str, address:str, buildingType:enum, floors:int, occupancy:int, maxCapacity:int, energyUsage:float, co2Emissions:float, status:enum, id:int}",
+        "PUT /building/{id}": "{zoneId:str, name:str, address:str, buildingType:enum, floors:int, occupancy:int, maxCapacity:int, energyUsage:float, co2Emissions:float, status:enum, id:int}",
+        "POST /register": "{status:str, httpCode:int, message:str}"
+      }
+    },
+    {
+      "_id": "smart-charging-stations-mock",
+      "name": "smart-charging-stations-api-mock",
+      "description": "API for managing EV charging infrastructure across the city. Supports creation, lookup, update, and deletion of charging stations, including real-time availability, active connectors, power output, and pricing. Supports filtering by standardized city zones (zoneId), availability, and charging speed, enabling cross-domain orchestration such as finding a rapid charger in a zone with low traffic congestion or near a tourist attraction.",
+      "capabilities": {
+        "GET /health": "Health check endpoint to verify that the Smart Charging Stations microservice is reachable and responsive.",
+        "GET /charging-station": "Retrieve EV charging stations registered in the city. Use query parameters to filter by zone, availability, charging speed, or operational status - for example, to find all available rapid chargers in Z-CENTRO, or all stations in a specific zone for mobility planning and EV route optimization.\n\n**Mock constraint — one filter per request**: this mock dispatcher resolves a single query parameter at a time. Combining multiple query parameters is NOT supported — only the primary dispatcher parameter is matched. Issue separate requests for each filter and merge results client-side.",
+        "POST /charging-station": "Register a new EV charging station in the city mobility system.",
+        "GET /charging-station/{id}": "Retrieve the current status of a specific EV charging station by ID.",
+        "PUT /charging-station/{id}": "Update the status or configuration of a specific EV charging station by ID.",
+        "DELETE /charging-station/{id}": "Permanently remove a specific charging station from the city registry.",
+        "POST /register": "Register this microservice with the central discovery system (Consul)."
+      },
+      "endpoints": {
+        "GET /health": "http://localhost:8585/rest/Smart+Charging+Stations+API/1.0/health",
+        "GET /charging-station": "http://localhost:8585/rest/Smart+Charging+Stations+API/1.0/charging-station",
+        "POST /charging-station": "http://localhost:8585/rest/Smart+Charging+Stations+API/1.0/charging-station",
+        "GET /charging-station/{id}": "http://localhost:8585/rest/Smart+Charging+Stations+API/1.0/charging-station/{id}",
+        "PUT /charging-station/{id}": "http://localhost:8585/rest/Smart+Charging+Stations+API/1.0/charging-station/{id}",
+        "DELETE /charging-station/{id}": "http://localhost:8585/rest/Smart+Charging+Stations+API/1.0/charging-station/{id}",
+        "POST /register": "http://localhost:8585/rest/Smart+Charging+Stations+API/1.0/register"
+      },
+      "generated_description": "Smart Charging Stations API. Health check. Search charging stations. Register new charging station. Get charging station details by ID. Update charging station details by ID. Delete charging station by ID. Register service with discovery system. zoneId: Z-CENTRO, Z-NORD, Z-SUD, Z-EST, Z-OVEST. chargingSpeed: slow, fast, rapid, ultra_rapid. status: operational, busy, maintenance, offline",
+      "parameters": {
+        "GET /charging-station": "{zoneId:enum(Z-CENTRO,Z-NORD,Z-SUD,Z-EST,Z-OVEST), available:bool, chargingSpeed:enum(slow,fast,rapid,ultra_rapid), status:enum(operational,busy,maintenance,offline)}",
+        "GET /charging-station/{id}": "{id:int*}",
+        "PUT /charging-station/{id}": "{id:int*}",
+        "DELETE /charging-station/{id}": "{id:int*}"
+      },
+      "request_schemas": {
+        "POST /charging-station": "{zoneId:str*, location:str*, available:bool*, connectors:int*, activeConnectors:int*, chargingSpeed:enum*, maxPowerKW:float*, pricePerKWh:float*, status:enum*}",
+        "PUT /charging-station/{id}": "{zoneId:str*, location:str*, available:bool*, connectors:int*, activeConnectors:int*, chargingSpeed:enum*, maxPowerKW:float*, pricePerKWh:float*, status:enum*}"
+      },
+      "response_schemas": {
+        "GET /charging-station": "[{zoneId:str, location:str, available:bool, connectors:int, activeConnectors:int, chargingSpeed:enum, maxPowerKW:float, pricePerKWh:float, status:enum, id:int}]",
+        "POST /charging-station": "{zoneId:str, location:str, available:bool, connectors:int, activeConnectors:int, chargingSpeed:enum, maxPowerKW:float, pricePerKWh:float, status:enum, id:int}",
+        "GET /charging-station/{id}": "{zoneId:str, location:str, available:bool, connectors:int, activeConnectors:int, chargingSpeed:enum, maxPowerKW:float, pricePerKWh:float, status:enum, id:int}",
+        "PUT /charging-station/{id}": "{zoneId:str, location:str, available:bool, connectors:int, activeConnectors:int, chargingSpeed:enum, maxPowerKW:float, pricePerKWh:float, status:enum, id:int}",
+        "POST /register": "{status:str, httpCode:int, message:str}"
+      }
+    },
+    {
+      "_id": "smart-citizens-reports-mock",
+      "name": "smart-citizens-reports-api-mock",
+      "description": "API empowering residents and the Smart City Virtual Assistant to actively participate in urban maintenance. This is the primary action interface for the Help System: it allows the creation, categorization, and tracking of civic issues (tickets). Supports cross-domain integration via 'zoneId' and multi-zone queries (zoneIds) to find open tickets across all zones returned by a previous task (e.g., zones with active sensor alerts or traffic incidents).",
+      "capabilities": {
+        "GET /health": "Performs a lightweight health check to verify that the Citizen Reports microservice is operational.",
+        "GET /citizen-report": "Retrieves a list of citizen reports. Crucial for the Assistant to check if a specific issue in a zone has already been reported before creating a duplicate ticket. Use query parameters to filter by zone, multiple zones, status, or category - for example to find all open lighting reports in Z-CENTRO, or all open reports across every zone with active environmental alerts.\n\n**Mock constraint — one filter per request**: this mock dispatcher resolves a single query parameter at a time. Combining multiple query parameters is NOT supported — only the primary dispatcher parameter is matched. Issue separate requests for each filter and merge results client-side.",
+        "POST /citizen-report": "Submits a new citizen report. This is the primary Actuator endpoint for the Smart City Assistant to escalate issues to human operators automatically.",
+        "GET /citizen-report/{id}": "Fetches the full details and current status of a specific citizen report by ticket ID.",
+        "PUT /citizen-report/{id}": "Updates an existing citizen report. Typically used by city officials to update the ticket's resolution status.",
+        "DELETE /citizen-report/{id}": "Deletes a specific citizen report from the system.",
+        "POST /register": "Registers this microservice with the central discovery registry."
+      },
+      "endpoints": {
+        "GET /health": "http://localhost:8585/rest/Smart+Citizens+Reports+and+Ticketing+API/1.0/health",
+        "GET /citizen-report": "http://localhost:8585/rest/Smart+Citizens+Reports+and+Ticketing+API/1.0/citizen-report",
+        "POST /citizen-report": "http://localhost:8585/rest/Smart+Citizens+Reports+and+Ticketing+API/1.0/citizen-report",
+        "GET /citizen-report/{id}": "http://localhost:8585/rest/Smart+Citizens+Reports+and+Ticketing+API/1.0/citizen-report/{id}",
+        "PUT /citizen-report/{id}": "http://localhost:8585/rest/Smart+Citizens+Reports+and+Ticketing+API/1.0/citizen-report/{id}",
+        "DELETE /citizen-report/{id}": "http://localhost:8585/rest/Smart+Citizens+Reports+and+Ticketing+API/1.0/citizen-report/{id}",
+        "POST /register": "http://localhost:8585/rest/Smart+Citizens+Reports+and+Ticketing+API/1.0/register"
+      },
+      "generated_description": "Smart Citizens Reports and Ticketing API. Health check. Search citizen reports. Submit new citizen report (Open Ticket). Get citizen report details by ID. Update citizen report by ID. Delete citizen report by ID. Register service to Consul. zoneId: Z-CENTRO, Z-NORD, Z-SUD, Z-EST, Z-OVEST. status: open, in_progress, resolved, closed. category: sanitation, infrastructure, safety, lighting, traffic, environment, other",
+      "parameters": {
+        "GET /citizen-report": "{zoneId:enum(Z-CENTRO,Z-NORD,Z-SUD,Z-EST,Z-OVEST), zoneIds:arr, status:enum(open,in_progress,resolved,closed), category:enum(sanitation,infrastructure,safety,lighting,traffic,environment,other)}",
+        "GET /citizen-report/{id}": "{id:int*}",
+        "PUT /citizen-report/{id}": "{id:int*}",
+        "DELETE /citizen-report/{id}": "{id:int*}"
+      },
+      "request_schemas": {
+        "POST /citizen-report": "{zoneId:str*, reporterName:str*, location:str*, category:enum*, description:str*, status:enum*, submittedAt:str*}",
+        "PUT /citizen-report/{id}": "{zoneId:str*, reporterName:str*, location:str*, category:enum*, description:str*, status:enum*, submittedAt:str*}"
+      },
+      "response_schemas": {
+        "GET /citizen-report": "[{zoneId:str, reporterName:str, location:str, category:enum, description:str, status:enum, submittedAt:str, id:int}]",
+        "POST /citizen-report": "{zoneId:str, reporterName:str, location:str, category:enum, description:str, status:enum, submittedAt:str, id:int}",
+        "GET /citizen-report/{id}": "{zoneId:str, reporterName:str, location:str, category:enum, description:str, status:enum, submittedAt:str, id:int}",
+        "PUT /citizen-report/{id}": "{zoneId:str, reporterName:str, location:str, category:enum, description:str, status:enum, submittedAt:str, id:int}",
+        "POST /register": "{status:str, httpCode:int, message:str}"
+      }
+    },
+    {
+      "_id": "smart-emergency-services-mock",
+      "name": "smart-emergency-services-api-mock",
+      "description": "API for managing emergency units and resources across the city. Supports creation, lookup, update, and deletion of emergency units including their status, availability, active incident tracking, and dispatch information. Supports filtering by standardized city zones (zoneId), unit type, and availability, enabling cross-domain orchestration such as finding all available medical units in a zone with an active traffic incident, or coordinating emergency response across multiple domains (traffic, sensors, lighting).",
+      "capabilities": {
+        "GET /health": "Health check endpoint to verify that the Smart Emergency Services microservice is running and responsive.",
+        "GET /emergency-unit": "Retrieve emergency units registered in the city response system. Use query parameters to filter by zone, unit type, availability, or operational status - for example, to find all available medical units in Z-CENTRO, or all fire units currently responding to incidents across the city.\n\n**Mock constraint — one filter per request**: this mock dispatcher resolves a single query parameter at a time. Combining multiple query parameters is NOT supported — only the primary dispatcher parameter is matched. Issue separate requests for each filter and merge results client-side.",
+        "POST /emergency-unit": "Register a new emergency unit in the city response system.",
+        "GET /emergency-unit/{id}": "Retrieve full details of a specific emergency unit by ID.",
+        "PUT /emergency-unit/{id}": "Update the operational status of a specific emergency unit by ID.",
+        "DELETE /emergency-unit/{id}": "Permanently remove a specific emergency unit from the city registry.",
+        "PUT /emergency-unit/zone/{zoneId}/status": "Trigger a coordinated status update for all emergency units operating in a specific zone. Useful for city-wide emergency protocols such as placing all units in a zone on alert, or releasing them after an incident is resolved.",
+        "POST /register": "Register this microservice with the central discovery system (Consul)."
+      },
+      "endpoints": {
+        "GET /health": "http://localhost:8585/rest/Smart+Emergency+Services+API/1.0/health",
+        "GET /emergency-unit": "http://localhost:8585/rest/Smart+Emergency+Services+API/1.0/emergency-unit",
+        "POST /emergency-unit": "http://localhost:8585/rest/Smart+Emergency+Services+API/1.0/emergency-unit",
+        "GET /emergency-unit/{id}": "http://localhost:8585/rest/Smart+Emergency+Services+API/1.0/emergency-unit/{id}",
+        "PUT /emergency-unit/{id}": "http://localhost:8585/rest/Smart+Emergency+Services+API/1.0/emergency-unit/{id}",
+        "DELETE /emergency-unit/{id}": "http://localhost:8585/rest/Smart+Emergency+Services+API/1.0/emergency-unit/{id}",
+        "PUT /emergency-unit/zone/{zoneId}/status": "http://localhost:8585/rest/Smart+Emergency+Services+API/1.0/emergency-unit/zone/{zoneId}/status",
+        "POST /register": "http://localhost:8585/rest/Smart+Emergency+Services+API/1.0/register"
+      },
+      "generated_description": "Smart Emergency Services API. Health check. Search emergency units. Register new emergency unit. Get emergency unit details by ID. Update emergency unit by ID. Delete emergency unit by ID. Update status of all units in a zone. Register service with discovery system. zoneId: Z-CENTRO, Z-NORD, Z-SUD, Z-EST, Z-OVEST. type: fire, police, medical, rescue, hazmat. status: idle, responding, on-scene, returning, maintenance, unavailable",
+      "parameters": {
+        "GET /emergency-unit": "{zoneId:enum(Z-CENTRO,Z-NORD,Z-SUD,Z-EST,Z-OVEST), available:bool, type:enum(fire,police,medical,rescue,hazmat), status:enum(idle,responding,on-scene,returning,maintenance,unavailable)}",
+        "GET /emergency-unit/{id}": "{id:int*}",
+        "PUT /emergency-unit/{id}": "{id:int*}",
+        "DELETE /emergency-unit/{id}": "{id:int*}",
+        "PUT /emergency-unit/zone/{zoneId}/status": "{zoneId:str*}"
+      },
+      "request_schemas": {
+        "POST /emergency-unit": "{zoneId:str*, type:enum*, location:str*, available:bool*, status:enum*, incidentId:str, dispatchTime:str, crewCount:int*, vehicleCode:str*}",
+        "PUT /emergency-unit/{id}": "{zoneId:str*, type:enum*, location:str*, available:bool*, status:enum*, incidentId:str, dispatchTime:str, crewCount:int*, vehicleCode:str*}",
+        "PUT /emergency-unit/zone/{zoneId}/status": "{newStatus:enum, reason:str}"
+      },
+      "response_schemas": {
+        "GET /emergency-unit": "[{zoneId:str, type:enum, location:str, available:bool, status:enum, incidentId:str, dispatchTime:str, crewCount:int, vehicleCode:str, id:int}]",
+        "POST /emergency-unit": "{zoneId:str, type:enum, location:str, available:bool, status:enum, incidentId:str, dispatchTime:str, crewCount:int, vehicleCode:str, id:int}",
+        "GET /emergency-unit/{id}": "{zoneId:str, type:enum, location:str, available:bool, status:enum, incidentId:str, dispatchTime:str, crewCount:int, vehicleCode:str, id:int}",
+        "PUT /emergency-unit/{id}": "{zoneId:str, type:enum, location:str, available:bool, status:enum, incidentId:str, dispatchTime:str, crewCount:int, vehicleCode:str, id:int}",
+        "POST /register": "{status:str, httpCode:int, message:str}"
+      }
+    },
+    {
+      "_id": "smart-environment-and-temperature-sensors-mock",
+      "name": "smart-environment-and-temperature-sensors-api-mock",
+      "description": "API for environmental monitoring across the city. Provides real-time data on ambient temperature (Celsius), air quality (AQI), humidity, noise, and weather alerts. Crucial for querying weather conditions or triggering cross-domain actions (e.g., imposing traffic limits during high pollution or frost). Supports querying by standardized city zone, sensor type, active alert status, and operational status to identify faulty or low-battery sensors requiring maintenance.",
+      "capabilities": {
+        "GET /health": "Health check endpoint to verify that the Smart Sensors microservice is reachable and responsive.",
+        "GET /sensor": "Retrieve environmental sensors deployed across the city. Use query parameters to filter by zone, sensor type, alert status, or operational status - for example to find all active air quality sensors in Z-CENTRO with an active alert, all noise sensors across the city, or all sensors in fault/maintenance state for servicing.\n\n**Mock constraint — one filter per request**: this mock dispatcher resolves a single query parameter at a time. Combining multiple query parameters is NOT supported — only the primary dispatcher parameter is matched. Issue separate requests for each filter and merge results client-side.",
+        "POST /sensor": "Register a new environmental sensor in the city monitoring network.",
+        "GET /sensor/{id}": "Retrieve the exact real-time reading and configuration of a single sensor by ID.",
+        "PUT /sensor/{id}": "Update the configuration or latest reading of a specific environmental sensor by ID.",
+        "DELETE /sensor/{id}": "Remove a specific environmental sensor from the city monitoring network by its ID.",
+        "POST /register": "Register this microservice with the central discovery system (Consul)."
+      },
+      "endpoints": {
+        "GET /health": "http://localhost:8585/rest/Smart+Environment+and+Temperature+Sensors+API/1.0/health",
+        "GET /sensor": "http://localhost:8585/rest/Smart+Environment+and+Temperature+Sensors+API/1.0/sensor",
+        "POST /sensor": "http://localhost:8585/rest/Smart+Environment+and+Temperature+Sensors+API/1.0/sensor",
+        "GET /sensor/{id}": "http://localhost:8585/rest/Smart+Environment+and+Temperature+Sensors+API/1.0/sensor/{id}",
+        "PUT /sensor/{id}": "http://localhost:8585/rest/Smart+Environment+and+Temperature+Sensors+API/1.0/sensor/{id}",
+        "DELETE /sensor/{id}": "http://localhost:8585/rest/Smart+Environment+and+Temperature+Sensors+API/1.0/sensor/{id}",
+        "POST /register": "http://localhost:8585/rest/Smart+Environment+and+Temperature+Sensors+API/1.0/register"
+      },
+      "generated_description": "Smart Environment and Temperature Sensors API. Health check. Search environmental sensors. Register new sensor. Get sensor details by ID. Update sensor by ID. Delete sensor by ID. Register service with discovery system. zoneId: Z-CENTRO, Z-NORD, Z-SUD, Z-EST, Z-OVEST. sensorType: temperature, humidity, air_quality, noise, light, pressure, wind_speed. status: active, inactive, maintenance, low_battery, fault",
+      "parameters": {
+        "GET /sensor": "{zoneId:enum(Z-CENTRO,Z-NORD,Z-SUD,Z-EST,Z-OVEST), sensorType:enum(temperature,humidity,air_quality,noise,light,pressure,wind_speed), alertActive:bool, status:enum(active,inactive,maintenance,low_battery,fault)}",
+        "GET /sensor/{id}": "{id:int*}",
+        "PUT /sensor/{id}": "{id:int*}",
+        "DELETE /sensor/{id}": "{id:int*}"
+      },
+      "request_schemas": {
+        "POST /sensor": "{zoneId:str*, location:str*, sensorType:enum*, lastReading:float*, readingUnit:enum*, threshold:float*, alertActive:bool*, alertReason:str*, batteryLevel:int*, lastUpdated:str*, status:enum*}",
+        "PUT /sensor/{id}": "{zoneId:str*, location:str*, sensorType:enum*, lastReading:float*, readingUnit:enum*, threshold:float*, alertActive:bool*, alertReason:str*, batteryLevel:int*, lastUpdated:str*, status:enum*}"
+      },
+      "response_schemas": {
+        "GET /sensor": "[{zoneId:str, location:str, sensorType:enum, lastReading:float, readingUnit:enum, threshold:float, alertActive:bool, alertReason:str, batteryLevel:int, lastUpdated:str, status:enum, id:int}]",
+        "POST /sensor": "{zoneId:str, location:str, sensorType:enum, lastReading:float, readingUnit:enum, threshold:float, alertActive:bool, alertReason:str, batteryLevel:int, lastUpdated:str, status:enum, id:int}",
+        "GET /sensor/{id}": "{zoneId:str, location:str, sensorType:enum, lastReading:float, readingUnit:enum, threshold:float, alertActive:bool, alertReason:str, batteryLevel:int, lastUpdated:str, status:enum, id:int}",
+        "PUT /sensor/{id}": "{zoneId:str, location:str, sensorType:enum, lastReading:float, readingUnit:enum, threshold:float, alertActive:bool, alertReason:str, batteryLevel:int, lastUpdated:str, status:enum, id:int}",
+        "POST /register": "{status:str, httpCode:int, message:str}"
+      }
+    },
+    {
+      "_id": "smart-lighting-mock",
+      "name": "smart-lighting-api-mock",
+      "description": "API for managing, monitoring, and controlling the urban street lighting infrastructure. Supports zone-based control (zoneId), allowing the orchestration engine to dynamically adjust lighting brightness across entire city districts in response to traffic incidents, pedestrian density, or severe weather conditions. Supports multi-zone queries (zoneIds) to find malfunctioning lights across all zones returned by a previous task (e.g., zones with active sensor alerts).",
+      "capabilities": {
+        "GET /health": "Performs a shallow health check to verify that the Smart Lighting microservice is reachable and responsive.",
+        "GET /light": "Retrieves a list of smart street lights. Use query parameters to filter by zone, multiple zones, or operational status - for example to find all malfunctioning lights in Z-CENTRO, or all offline lights across every zone that has an active environmental alert.\n\n**Mock constraint — one filter per request**: this mock dispatcher resolves a single query parameter at a time. Combining multiple query parameters is NOT supported — only the primary dispatcher parameter is matched. Issue separate requests for each filter and merge results client-side.",
+        "POST /light": "Registers a newly installed smart light pole into the city's infrastructure grid.",
+        "GET /light/{id}": "Fetches real-time telemetry for a specific street light by ID.",
+        "PUT /light/{id}": "Updates the configuration or status of a specific smart light.",
+        "DELETE /light/{id}": "Permanently removes a smart light pole from the city's infrastructure registry.",
+        "PUT /light/zone/{zoneId}/brightness": "Dynamically adjust the brightness level for all smart street lights within a specific zone. Useful for reacting to emergencies, traffic incidents, or energy-saving schedules.",
+        "POST /register": "Registers this microservice with the central discovery system (Consul)."
+      },
+      "endpoints": {
+        "GET /health": "http://localhost:8585/rest/Smart+Lighting+and+Energy+API/1.0/health",
+        "GET /light": "http://localhost:8585/rest/Smart+Lighting+and+Energy+API/1.0/light",
+        "POST /light": "http://localhost:8585/rest/Smart+Lighting+and+Energy+API/1.0/light",
+        "GET /light/{id}": "http://localhost:8585/rest/Smart+Lighting+and+Energy+API/1.0/light/{id}",
+        "PUT /light/{id}": "http://localhost:8585/rest/Smart+Lighting+and+Energy+API/1.0/light/{id}",
+        "DELETE /light/{id}": "http://localhost:8585/rest/Smart+Lighting+and+Energy+API/1.0/light/{id}",
+        "PUT /light/zone/{zoneId}/brightness": "http://localhost:8585/rest/Smart+Lighting+and+Energy+API/1.0/light/zone/{zoneId}/brightness",
+        "POST /register": "http://localhost:8585/rest/Smart+Lighting+and+Energy+API/1.0/register"
+      },
+      "generated_description": "Smart Lighting and Energy API. Health check endpoint. Search smart lights. Register new smart light. Get smart light details by ID. Update smart light by ID. Delete smart light by ID. Set brightness for an entire zone. Register service with discovery system. zoneId: Z-CENTRO, Z-NORD, Z-SUD, Z-EST, Z-OVEST. status: on, off, malfunctioning",
+      "parameters": {
+        "GET /light": "{zoneId:enum(Z-CENTRO,Z-NORD,Z-SUD,Z-EST,Z-OVEST), zoneIds:arr, status:enum(on,off,malfunctioning)}",
+        "GET /light/{id}": "{id:int*}",
+        "PUT /light/{id}": "{id:int*}",
+        "DELETE /light/{id}": "{id:int*}",
+        "PUT /light/zone/{zoneId}/brightness": "{zoneId:str*}"
+      },
+      "request_schemas": {
+        "POST /light": "{zoneId:str*, location:str*, status:enum*, brightness:int*, energyConsumption:float*, smartEnabled:bool*}",
+        "PUT /light/{id}": "{zoneId:str*, location:str*, status:enum*, brightness:int*, energyConsumption:float*, smartEnabled:bool*}",
+        "PUT /light/zone/{zoneId}/brightness": "{brightness:int, reason:str}"
+      },
+      "response_schemas": {
+        "GET /light": "[{zoneId:str, location:str, status:enum, brightness:int, energyConsumption:float, smartEnabled:bool, id:int}]",
+        "POST /light": "{zoneId:str, location:str, status:enum, brightness:int, energyConsumption:float, smartEnabled:bool, id:int}",
+        "GET /light/{id}": "{zoneId:str, location:str, status:enum, brightness:int, energyConsumption:float, smartEnabled:bool, id:int}",
+        "PUT /light/{id}": "{zoneId:str, location:str, status:enum, brightness:int, energyConsumption:float, smartEnabled:bool, id:int}",
+        "POST /register": "{status:str, httpCode:int, message:str}"
+      }
+    },
+    {
+      "_id": "smart-parking-mock",
+      "name": "smart-parking-api-mock",
+      "description": "API for managing parking spots, lots, and dynamic pricing across the city. Supports searching for available spots by standardized city zones (zoneId) and spot type. Supports multi-zone queries (zoneIds) to find parking across all zones returned by a previous task (e.g., all zones where tourist attractions are open, or zones with low traffic congestion). Crucial for mobility orchestration and cross-domain reactions, such as dynamically discounting or raising parking prices in specific zones during traffic congestion or pollution events.",
+      "capabilities": {
+        "GET /health": "Health check endpoint to verify that the Smart Parking microservice is reachable and responsive.",
+        "GET /parking-spot": "Retrieve parking spots registered in the city. Use query parameters to filter by zone, multiple zones, availability, spot type or status - for example to find all free disabled spots in Z-CENTRO, all available electric spots for EV drivers, or all free spots across every zone where tourist attractions are currently open.\n\n**Mock constraint — one filter per request**: this mock dispatcher resolves a single query parameter at a time. Combining multiple query parameters is NOT supported — only the primary dispatcher parameter is matched. Issue separate requests for each filter and merge results client-side.",
+        "POST /parking-spot": "Register a new parking spot in the city mobility system.",
+        "GET /parking-spot/{id}": "Retrieve the current availability and details of a specific parking spot by ID.",
+        "PUT /parking-spot/{id}": "Update the status or configuration of a specific parking spot by ID.",
+        "DELETE /parking-spot/{id}": "Remove a specific parking spot from the city mobility registry.",
+        "PUT /parking-spot/zone/{zoneId}/pricing": "Dynamically adjust the hourly parking rate for all spots in a specific zone. Useful for reacting to traffic congestion or pollution alerts by incentivizing or discouraging parking in a given area.",
+        "POST /register": "Register this service to the discovery system (Consul)."
+      },
+      "endpoints": {
+        "GET /health": "http://localhost:8585/rest/Smart+Parking+and+Mobility+API/1.0/health",
+        "GET /parking-spot": "http://localhost:8585/rest/Smart+Parking+and+Mobility+API/1.0/parking-spot",
+        "POST /parking-spot": "http://localhost:8585/rest/Smart+Parking+and+Mobility+API/1.0/parking-spot",
+        "GET /parking-spot/{id}": "http://localhost:8585/rest/Smart+Parking+and+Mobility+API/1.0/parking-spot/{id}",
+        "PUT /parking-spot/{id}": "http://localhost:8585/rest/Smart+Parking+and+Mobility+API/1.0/parking-spot/{id}",
+        "DELETE /parking-spot/{id}": "http://localhost:8585/rest/Smart+Parking+and+Mobility+API/1.0/parking-spot/{id}",
+        "PUT /parking-spot/zone/{zoneId}/pricing": "http://localhost:8585/rest/Smart+Parking+and+Mobility+API/1.0/parking-spot/zone/{zoneId}/pricing",
+        "POST /register": "http://localhost:8585/rest/Smart+Parking+and+Mobility+API/1.0/register"
+      },
+      "generated_description": "Smart Parking and Mobility API. Health check endpoint. Search parking spots. Register new parking spot. Get parking spot details by ID. Update parking spot by ID. Delete parking spot by ID. Update pricing for an entire zone. Register service with discovery system. zoneId: Z-CENTRO, Z-NORD, Z-SUD, Z-EST, Z-OVEST. spotType: standard, disabled, electric, motorcycle, reserved. status: free, occupied, reserved, maintenance",
+      "parameters": {
+        "GET /parking-spot": "{zoneId:enum(Z-CENTRO,Z-NORD,Z-SUD,Z-EST,Z-OVEST), zoneIds:arr, available:bool, spotType:enum(standard,disabled,electric,motorcycle,reserved), status:enum(free,occupied,reserved,maintenance)}",
+        "GET /parking-spot/{id}": "{id:int*}",
+        "PUT /parking-spot/{id}": "{id:int*}",
+        "DELETE /parking-spot/{id}": "{id:int*}",
+        "PUT /parking-spot/zone/{zoneId}/pricing": "{zoneId:str*}"
+      },
+      "request_schemas": {
+        "POST /parking-spot": "{zoneId:str*, location:str*, available:bool*, spotType:enum*, pricePerHour:float*, status:enum*, lastUpdated:str*}",
+        "PUT /parking-spot/{id}": "{zoneId:str*, location:str*, available:bool*, spotType:enum*, pricePerHour:float*, status:enum*, lastUpdated:str*}",
+        "PUT /parking-spot/zone/{zoneId}/pricing": "{newPricePerHour:float, reason:str}"
+      },
+      "response_schemas": {
+        "GET /parking-spot": "[{zoneId:str, location:str, available:bool, spotType:enum, pricePerHour:float, status:enum, lastUpdated:str, id:int}]",
+        "POST /parking-spot": "{zoneId:str, location:str, available:bool, spotType:enum, pricePerHour:float, status:enum, lastUpdated:str, id:int}",
+        "GET /parking-spot/{id}": "{zoneId:str, location:str, available:bool, spotType:enum, pricePerHour:float, status:enum, lastUpdated:str, id:int}",
+        "PUT /parking-spot/{id}": "{zoneId:str, location:str, available:bool, spotType:enum, pricePerHour:float, status:enum, lastUpdated:str, id:int}",
+        "POST /register": "{status:str, httpCode:int, message:str}"
+      }
+    },
+    {
+      "_id": "smart-public-transport-mock",
+      "name": "smart-public-transport-api-mock",
+      "description": "API for managing public transport vehicles (buses, trams, metro) and routes across the city. Crucial for urban mobility orchestration. Supports dynamic filtering by city zones (zoneId) and operational status. Supports multi-zone queries (zoneIds) to find vehicles across all zones returned by a previous task. Can be used as an actuator to halt or reroute transit services in specific zones during environmental emergencies or severe traffic congestion.",
+      "capabilities": {
+        "GET /health": "Health check endpoint to verify that the Smart Public Transport microservice is reachable and responsive.",
+        "GET /vehicle": "Retrieve public transport vehicles currently tracked by the system. Use query parameters to filter by city zone, multiple zones, operational status, or vehicle type - for example to find all delayed buses in Z-CENTRO, or all vehicles across every zone where a traffic incident has been detected.\n\n**Mock constraint — one filter per request**: this mock dispatcher resolves a single query parameter at a time. Combining multiple query parameters is NOT supported — only the primary dispatcher parameter is matched. Issue separate requests for each filter and merge results client-side.",
+        "POST /vehicle": "Register a new public transport vehicle in the city transit system.",
+        "GET /vehicle/{id}": "Retrieve real-time data for a specific public transport vehicle by ID.",
+        "PUT /vehicle/{id}": "Update the real-time data of a specific public transport vehicle by ID.",
+        "DELETE /vehicle/{id}": "Remove a specific public transport vehicle from the registry.",
+        "PUT /vehicle/zone/{zoneId}/service-status": "Dynamically halt, suspend, or resume public transport services across an entire zone. Critical for emergency response (e.g., suspending bus service in Z-CENTRO due to severe flooding or traffic gridlock).",
+        "POST /register": "Register this service to the discovery system (Consul)."
+      },
+      "endpoints": {
+        "GET /health": "http://localhost:8585/rest/Smart+Public+Transport+and+Transit+API/1.0/health",
+        "GET /vehicle": "http://localhost:8585/rest/Smart+Public+Transport+and+Transit+API/1.0/vehicle",
+        "POST /vehicle": "http://localhost:8585/rest/Smart+Public+Transport+and+Transit+API/1.0/vehicle",
+        "GET /vehicle/{id}": "http://localhost:8585/rest/Smart+Public+Transport+and+Transit+API/1.0/vehicle/{id}",
+        "PUT /vehicle/{id}": "http://localhost:8585/rest/Smart+Public+Transport+and+Transit+API/1.0/vehicle/{id}",
+        "DELETE /vehicle/{id}": "http://localhost:8585/rest/Smart+Public+Transport+and+Transit+API/1.0/vehicle/{id}",
+        "PUT /vehicle/zone/{zoneId}/service-status": "http://localhost:8585/rest/Smart+Public+Transport+and+Transit+API/1.0/vehicle/zone/{zoneId}/service-status",
+        "POST /register": "http://localhost:8585/rest/Smart+Public+Transport+and+Transit+API/1.0/register"
+      },
+      "generated_description": "Smart Public Transport and Transit API. Health check endpoint. Search transit vehicles. Register new vehicle. Get vehicle details by ID. Update vehicle by ID. Delete vehicle by ID. Update transit service status for a zone. Register service with discovery system. zoneId: Z-CENTRO, Z-NORD, Z-SUD, Z-EST, Z-OVEST. status: in-service, out-of-service, delayed, maintenance, end-of-line, suspended. vehicleType: bus, tram, metro, ferry",
+      "parameters": {
+        "GET /vehicle": "{zoneId:enum(Z-CENTRO,Z-NORD,Z-SUD,Z-EST,Z-OVEST), zoneIds:arr, status:enum(in-service,out-of-service,delayed,maintenance,end-of-line,suspended), vehicleType:enum(bus,tram,metro,ferry)}",
+        "GET /vehicle/{id}": "{id:int*}",
+        "PUT /vehicle/{id}": "{id:int*}",
+        "DELETE /vehicle/{id}": "{id:int*}",
+        "PUT /vehicle/zone/{zoneId}/service-status": "{zoneId:str*}"
+      },
+      "request_schemas": {
+        "POST /vehicle": "{zoneId:str*, routeId:str*, vehicleType:enum*, currentLocation:str*, occupancy:int*, capacity:int*, status:enum*, lastUpdated:str*}",
+        "PUT /vehicle/{id}": "{zoneId:str*, routeId:str*, vehicleType:enum*, currentLocation:str*, occupancy:int*, capacity:int*, status:enum*, lastUpdated:str*}",
+        "PUT /vehicle/zone/{zoneId}/service-status": "{newStatus:enum, reason:str}"
+      },
+      "response_schemas": {
+        "GET /vehicle": "[{zoneId:str, routeId:str, vehicleType:enum, currentLocation:str, occupancy:int, capacity:int, status:enum, lastUpdated:str, id:int}]",
+        "POST /vehicle": "{zoneId:str, routeId:str, vehicleType:enum, currentLocation:str, occupancy:int, capacity:int, status:enum, lastUpdated:str, id:int}",
+        "GET /vehicle/{id}": "{zoneId:str, routeId:str, vehicleType:enum, currentLocation:str, occupancy:int, capacity:int, status:enum, lastUpdated:str, id:int}",
+        "PUT /vehicle/{id}": "{zoneId:str, routeId:str, vehicleType:enum, currentLocation:str, occupancy:int, capacity:int, status:enum, lastUpdated:str, id:int}",
+        "POST /register": "{status:str, httpCode:int, message:str}"
+      }
+    },
+    {
+      "_id": "smart-tourist-attractions-mock",
+      "name": "smart-tourist-attractions-api-mock",
+      "description": "Smart Tourist Attractions API for managing, monitoring, and providing real-time data on city landmarks, museums, and historical sites. Designed for cross-domain orchestration: supports filtering by standardized city zones (zoneId), category, operational status, and accessibility requirements. Allows automated emergency responses such as temporarily closing all attractions in a specific zone due to severe weather or traffic gridlock. Supports accessibility-aware queries to find wheelchair-friendly attractions with short wait times.",
+      "capabilities": {
+        "GET /health": "Performs a lightweight health check to verify that the Tourist Attractions microservice is fully operational and responsive.",
+        "GET /attraction": "Retrieves a catalog of tourist attractions in the city. Use query parameters to filter by zone, category, operational status, or accessibility - for example to find all open museums in Z-CENTRO, all wheelchair-accessible attractions, or all currently closed sites during an emergency.\n\n**Mock constraint — one filter per request**: this mock dispatcher resolves a single query parameter at a time. Combining multiple query parameters is NOT supported — only the primary dispatcher parameter is matched. Issue separate requests for each filter and merge results client-side.",
+        "POST /attraction": "Registers a newly monitored tourist attraction into the city's tourism ecosystem.",
+        "GET /attraction/{id}": "Fetches the real-time details and telemetry of a specific tourist attraction using its unique ID.",
+        "PUT /attraction/{id}": "Updates the real-time data of an attraction (e.g., visitor counts, wait times, or status).",
+        "DELETE /attraction/{id}": "Permanently removes a specific attraction from the tourism registry.",
+        "PUT /attraction/zone/{zoneId}/status": "Dynamically update the operational status of all tourist attractions in a specific zone. Extremely useful for emergency evacuations, severe weather closures, or city-wide special events.",
+        "POST /register": "Register this microservice with the central discovery system (Consul)."
+      },
+      "endpoints": {
+        "GET /health": "http://localhost:8585/rest/Smart+Tourist+Attractions+API/1.0/health",
+        "GET /attraction": "http://localhost:8585/rest/Smart+Tourist+Attractions+API/1.0/attraction",
+        "POST /attraction": "http://localhost:8585/rest/Smart+Tourist+Attractions+API/1.0/attraction",
+        "GET /attraction/{id}": "http://localhost:8585/rest/Smart+Tourist+Attractions+API/1.0/attraction/{id}",
+        "PUT /attraction/{id}": "http://localhost:8585/rest/Smart+Tourist+Attractions+API/1.0/attraction/{id}",
+        "DELETE /attraction/{id}": "http://localhost:8585/rest/Smart+Tourist+Attractions+API/1.0/attraction/{id}",
+        "PUT /attraction/zone/{zoneId}/status": "http://localhost:8585/rest/Smart+Tourist+Attractions+API/1.0/attraction/zone/{zoneId}/status",
+        "POST /register": "http://localhost:8585/rest/Smart+Tourist+Attractions+API/1.0/register"
+      },
+      "generated_description": "Smart Tourist Attractions API. Health check endpoint. Search tourist attractions. Register new tourist attraction. Get tourist attraction details by ID. Update tourist attraction by ID. Delete tourist attraction by ID. Set status for all attractions in a zone. Register service with discovery system. zoneId: Z-CENTRO, Z-NORD, Z-SUD, Z-EST, Z-OVEST. category: archaeological, museum, church, palace, park, monument, theatre, other. status: open, closed, temporarily_closed, special_event",
+      "parameters": {
+        "GET /attraction": "{zoneId:enum(Z-CENTRO,Z-NORD,Z-SUD,Z-EST,Z-OVEST), category:enum(archaeological,museum,church,palace,park,monument,theatre,other), status:enum(open,closed,temporarily_closed,special_event), wheelchairAccessible:bool}",
+        "GET /attraction/{id}": "{id:int*}",
+        "PUT /attraction/{id}": "{id:int*}",
+        "DELETE /attraction/{id}": "{id:int*}",
+        "PUT /attraction/zone/{zoneId}/status": "{zoneId:str*}"
+      },
+      "request_schemas": {
+        "POST /attraction": "{zoneId:str*, name:str*, category:enum*, address:str*, openingTime:str*, closingTime:str*, ticketPriceEur:float*, currentVisitors:int*, maxCapacity:int*, waitingTimeMinutes:int*, wheelchairAccessible:bool*, availableLanguages:arr*, status:enum*, lastUpdated:str*}",
+        "PUT /attraction/{id}": "{zoneId:str*, name:str*, category:enum*, address:str*, openingTime:str*, closingTime:str*, ticketPriceEur:float*, currentVisitors:int*, maxCapacity:int*, waitingTimeMinutes:int*, wheelchairAccessible:bool*, availableLanguages:arr*, status:enum*, lastUpdated:str*}",
+        "PUT /attraction/zone/{zoneId}/status": "{newStatus:enum, reason:str}"
+      },
+      "response_schemas": {
+        "GET /attraction": "[{zoneId:str, name:str, category:enum, address:str, openingTime:str, closingTime:str, ticketPriceEur:float, currentVisitors:int, maxCapacity:int, waitingTimeMinutes:int, wheelchairAccessible:bool, availableLanguages:arr, status:enum, lastUpdated:str, id:int}]",
+        "POST /attraction": "{zoneId:str, name:str, category:enum, address:str, openingTime:str, closingTime:str, ticketPriceEur:float, currentVisitors:int, maxCapacity:int, waitingTimeMinutes:int, wheelchairAccessible:bool, availableLanguages:arr, status:enum, lastUpdated:str, id:int}",
+        "GET /attraction/{id}": "{zoneId:str, name:str, category:enum, address:str, openingTime:str, closingTime:str, ticketPriceEur:float, currentVisitors:int, maxCapacity:int, waitingTimeMinutes:int, wheelchairAccessible:bool, availableLanguages:arr, status:enum, lastUpdated:str, id:int}",
+        "PUT /attraction/{id}": "{zoneId:str, name:str, category:enum, address:str, openingTime:str, closingTime:str, ticketPriceEur:float, currentVisitors:int, maxCapacity:int, waitingTimeMinutes:int, wheelchairAccessible:bool, availableLanguages:arr, status:enum, lastUpdated:str, id:int}",
+        "POST /register": "{status:str, httpCode:int, message:str}"
+      }
+    },
+    {
+      "_id": "smart-traffic-monitoring-mock",
+      "name": "smart-traffic-monitoring-api-mock",
+      "description": "API for managing traffic flows, detecting incidents, and enforcing road regulations across the city. Compatible with cross-domain orchestration: use this service to query congestion levels in specific zones (zoneId), filter active incidents, or act as an actuator (e.g., dynamically lowering speed limits in response to pollution alerts from the Sensors API). Supports filtering by zone, congestion level, incident status, and sensor activity.",
+      "capabilities": {
+        "GET /health": "Health check endpoint to verify that the Smart Traffic Monitoring microservice is reachable and responsive.",
+        "GET /traffic-sensor": "Retrieve traffic sensors deployed across the city. Use query parameters to filter by zone, congestion level, incident status, or sensor activity - for example to find all active sensors with critical congestion in Z-CENTRO, or all sensors currently detecting an incident, or all inactive sensors for maintenance.\n\n**Mock constraint — one filter per request**: this mock dispatcher resolves a single query parameter at a time. Combining multiple query parameters is NOT supported — only the primary dispatcher parameter is matched. Issue separate requests for each filter and merge results client-side.",
+        "POST /traffic-sensor": "Register a new traffic monitoring sensor in the city traffic control system.",
+        "GET /traffic-sensor/{id}": "Retrieve real-time traffic data from a specific sensor by ID.",
+        "PUT /traffic-sensor/{id}": "Update the data of a specific traffic sensor by ID.",
+        "DELETE /traffic-sensor/{id}": "Remove a specific traffic monitoring sensor from the city registry.",
+        "PUT /traffic-sensor/zone/{zoneId}/speed-limit": "Dynamically enforce a new speed limit on digital road signs for an entire city zone. Use this to react to environmental hazards (high pollution, frost warning) or traffic congestion detected by sensors.",
+        "POST /register": "Register this microservice with the central discovery system (Consul)."
+      },
+      "endpoints": {
+        "GET /health": "http://localhost:8585/rest/Smart+Traffic+and+Road+Monitoring+API/1.0/health",
+        "GET /traffic-sensor": "http://localhost:8585/rest/Smart+Traffic+and+Road+Monitoring+API/1.0/traffic-sensor",
+        "POST /traffic-sensor": "http://localhost:8585/rest/Smart+Traffic+and+Road+Monitoring+API/1.0/traffic-sensor",
+        "GET /traffic-sensor/{id}": "http://localhost:8585/rest/Smart+Traffic+and+Road+Monitoring+API/1.0/traffic-sensor/{id}",
+        "PUT /traffic-sensor/{id}": "http://localhost:8585/rest/Smart+Traffic+and+Road+Monitoring+API/1.0/traffic-sensor/{id}",
+        "DELETE /traffic-sensor/{id}": "http://localhost:8585/rest/Smart+Traffic+and+Road+Monitoring+API/1.0/traffic-sensor/{id}",
+        "PUT /traffic-sensor/zone/{zoneId}/speed-limit": "http://localhost:8585/rest/Smart+Traffic+and+Road+Monitoring+API/1.0/traffic-sensor/zone/{zoneId}/speed-limit",
+        "POST /register": "http://localhost:8585/rest/Smart+Traffic+and+Road+Monitoring+API/1.0/register"
+      },
+      "generated_description": "Smart Traffic and Road Monitoring API. Health check endpoint. Search traffic sensors. Register new traffic sensor. Get traffic sensor by ID. Update traffic sensor by ID. Delete traffic sensor by ID. Update speed limit for an entire zone. Register service with discovery system. zoneId: Z-CENTRO, Z-NORD, Z-SUD, Z-EST, Z-OVEST. congestionLevel: low, medium, high, critical",
+      "parameters": {
+        "GET /traffic-sensor": "{zoneId:enum(Z-CENTRO,Z-NORD,Z-SUD,Z-EST,Z-OVEST), congestionLevel:enum(low,medium,high,critical), incidentDetected:bool, active:bool}",
+        "GET /traffic-sensor/{id}": "{id:int*}",
+        "PUT /traffic-sensor/{id}": "{id:int*}",
+        "DELETE /traffic-sensor/{id}": "{id:int*}",
+        "PUT /traffic-sensor/zone/{zoneId}/speed-limit": "{zoneId:str*}"
+      },
+      "request_schemas": {
+        "POST /traffic-sensor": "{zoneId:str*, location:str*, active:bool*, speedLimit:int*, averageSpeed:float*, vehicleCount:int*, congestionLevel:enum*, incidentDetected:bool*, lastUpdated:str*}",
+        "PUT /traffic-sensor/{id}": "{zoneId:str*, location:str*, active:bool*, speedLimit:int*, averageSpeed:float*, vehicleCount:int*, congestionLevel:enum*, incidentDetected:bool*, lastUpdated:str*}",
+        "PUT /traffic-sensor/zone/{zoneId}/speed-limit": "{newSpeedLimit:int, reason:str}"
+      },
+      "response_schemas": {
+        "GET /traffic-sensor": "[{zoneId:str, location:str, active:bool, speedLimit:int, averageSpeed:float, vehicleCount:int, congestionLevel:enum, incidentDetected:bool, lastUpdated:str, id:int}]",
+        "POST /traffic-sensor": "{zoneId:str, location:str, active:bool, speedLimit:int, averageSpeed:float, vehicleCount:int, congestionLevel:enum, incidentDetected:bool, lastUpdated:str, id:int}",
+        "GET /traffic-sensor/{id}": "{zoneId:str, location:str, active:bool, speedLimit:int, averageSpeed:float, vehicleCount:int, congestionLevel:enum, incidentDetected:bool, lastUpdated:str, id:int}",
+        "PUT /traffic-sensor/{id}": "{zoneId:str, location:str, active:bool, speedLimit:int, averageSpeed:float, vehicleCount:int, congestionLevel:enum, incidentDetected:bool, lastUpdated:str, id:int}",
+        "POST /register": "{status:str, httpCode:int, message:str}"
+      }
+    }
+  ]
+}

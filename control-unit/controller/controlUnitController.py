@@ -20,10 +20,13 @@ class ConversationalAgent(Resource):
         # max_rank (opzionale): scoping del catalogo per il test di robustezza.
         # Viene propagato fino alla /index/search del gateway.
         max_rank = data.get("max_rank")
+        # dry_run (opzionale): planning + validazione senza esecuzione. Usato
+        # dall'harness di valutazione del Designer.
+        dry_run = bool(data.get("dry_run", False))
         print(f"Input ricevuto: {user_input}")
 
         orchestrator = Orchestrator()
-        results = orchestrator.control(user_input, max_rank=max_rank)
+        results = orchestrator.control(user_input, max_rank=max_rank, dry_run=dry_run)
         # control() puo' restituire una flask Response (caso download file)
         if isinstance(results, Response):
             return results

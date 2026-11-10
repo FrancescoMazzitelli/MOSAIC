@@ -1,0 +1,39 @@
+{
+  "run_id": "run_20261109_111422",
+  "started_at": "2026-11-09T11:14:22",
+  "control_url": "http://localhost:5500/api/control/invoke",
+  "queries": "/home/francesco/Desktop/MOSAIC/Eval/designer_eval/queries/designer_queries.csv",
+  "smart_city": "/home/francesco/Desktop/MOSAIC/Eval/designer_eval/queries/smart_city_100.csv",
+  "catalog": "/home/francesco/Desktop/MOSAIC/Eval/designer_eval/catalog_snapshot.json",
+  "catalog_sha256": "a45acf4e60f2e46eec589df9086184658eae69fd2ea765d9a962bc8ccf31d5fd",
+  "dry_run": true,
+  "timeout_s": 150,
+  "seed": 42,
+  "git_commit": "1bee14d8db53f01b798b2059aea0b7e7a454d793",
+  "prompt_hashes": {
+    "control-unit/service/designerService.py": "b80ee51f0ad37c3e11f22ff92ce126040a32f4a92f477cf1bac9556164d485d1",
+    "control-unit/service/planning/prompt_provider.py": "6ac4147e2881b5da4ac579ba44e5fdfd804efd9c34aaa241ba766adc7c3f783d",
+    "control-unit/config/prompts/planner_system.md": "d37d1a5659df9b7d87b4325db603b3b95057e9ca5d8d2c3ea1e15e098d6366fd",
+    "control-unit/config/prompts/planner_ablation.md": "280d9e7f80176e5d80cb8c27767014de727baf83ba0dc0ba7d6146dea9c556c2",
+    "control-unit/config/prompts/planner_runner.md": null
+  },
+  "env": {
+    "LLM_MODEL": null,
+    "DESIGNER_LLM_MODEL": null,
+    "DESIGNER_TEMPERATURE": "0",
+    "DESIGNER_SEED": "42",
+    "DESIGNER_NUM_CTX": null,
+    "USE_LLM_DECOMPOSITION": null,
+    "TOP_ENDPOINTS_PER_SERVICE": null,
+    "BACKEND_MODE": null,
+    "RERANK_MODEL": null
+  },
+  "diag_counts": {
+    "OUT_OF_DOMAIN": 15,
+    "AMBIGUOUS": 15,
+    "INVALID": 15
+  },
+  "total_queries": 145,
+  "finished_at": "2026-11-09T13:37:00",
+  "instrumented_server": true
+}

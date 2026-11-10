@@ -44,8 +44,8 @@ services:
       api-importer:
         condition: service_started
     volumes:
-      - ./Eval/service-mocks/apis:/apis
-      - ./Eval/service-mocks/scripts:/scripts
+      - ./MOCKS-smart-city/apis:/apis
+      - ./MOCKS-smart-city/scripts:/scripts:ro
       # - ./Eval/service-mocks/apis:/apis
       # - ./Eval/service-mocks/scripts:/scripts
       - ./deploy.sh:/deploy.sh:ro
@@ -157,11 +157,13 @@ services:
       - QDRANT_PORT=6333
       - QDRANT_COLLECTION=services
       - OLLAMA_URL=http://192.168.250.40:15888
+      - USE_LLM_DECOMPOSITION=true
       #- USE_LLM_DECOMPOSITION=true
       # Parallelismo reranking CrossEncoder (per accelerare i test sotto rumore).
       # RERANK_THREADS=0 lascia decidere a ONNX Runtime; valori tipici = n. core fisici.
       - RERANK_THREADS=${RERANK_THREADS:-8}
       - RERANK_BATCH_SIZE=${RERANK_BATCH_SIZE:-16}
+      - TOP_ENDPOINTS_PER_SERVICE=${TOP_ENDPOINTS_PER_SERVICE:-6}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 15s
@@ -189,8 +191,10 @@ services:
       - MOCK_SERVER_URL=http://mock-server:8080
       - BACKEND_MODE=${BACKEND_MODE:-MOCK}
       - API_AUTH_HEADERS=${API_AUTH_HEADERS:-}
-      - PLANNER_SYSTEM_PROMPT_PATH=/app/config/prompts/planner_runner.md
+      - PLANNER_SYSTEM_PROMPT_PATH=/app/config/prompts/planner_system.md
       - PLANNER_OUTPUT_SCHEMA_PATH=/app/config/schemas/plan_output.json
+      - DESIGNER_TEMPERATURE=${DESIGNER_TEMPERATURE:-0}
+      - DESIGNER_SEED=${DESIGNER_SEED:-42}
     stop_grace_period: 10s
     depends_on:
       mock-deployer:

@@ -391,8 +391,8 @@ class Service:
         Output: "{location:str*, fillLevel:int*, binType:enum*, status:enum*}"
                 (i campi senza * sono opzionali)
         """
-        # solo POST e PUT hanno un request body
-        if method.upper() not in {"POST", "PUT"}:
+        # POST, PUT e PATCH hanno un request body
+        if method.upper() not in {"POST", "PUT", "PATCH"}:
             return None
 
         schema = None
@@ -535,7 +535,7 @@ class Service:
             if not isinstance(methods, dict):
                 continue
             for method, details in methods.items():
-                if method.lower() not in {"get", "post", "put", "delete"}:
+                if method.lower() not in {"get", "post", "put", "delete", "patch"}:
                     continue
                 if not isinstance(details, dict):
                     continue
@@ -588,7 +588,7 @@ class Service:
             if not isinstance(methods, dict):
                 continue
             for method, details in methods.items():
-                if method.lower() not in {"get", "post", "put", "delete"}:
+                if method.lower() not in {"get", "post", "put", "delete", "patch"}:
                     continue
                 if not isinstance(details, dict):
                     continue
@@ -724,10 +724,17 @@ class Service:
         """
         try:
             # --- FIX UTF-8 ---
-            resp = requests.get(swagger_url)
-            resp.encoding = 'utf-8'
+            # /import/file passa un URL file://: requests non supporta lo
+            # schema file, quindi leggiamo direttamente dal filesystem.
+            if swagger_url.startswith("file://"):
+                with open(swagger_url[len("file://"):], "r", encoding="utf-8") as fh:
+                    spec_text = fh.read()
+            else:
+                resp = requests.get(swagger_url)
+                resp.encoding = 'utf-8'
+                spec_text = resp.text
             parser  = prance.ResolvingParser(
-                spec_string=resp.text,
+                spec_string=spec_text,
                 lazy=False,
                 strict=False,
             )
@@ -778,7 +785,7 @@ class Service:
             if not isinstance(methods, dict):
                 continue
             for method, details in methods.items():
-                if method.lower() not in {"get", "post", "put", "delete"}:
+                if method.lower() not in {"get", "post", "put", "delete", "patch"}:
                     continue
                 if not isinstance(details, dict):
                     continue
@@ -1024,13 +1031,24 @@ class Service:
 
     def register_existing_to_registry(self):
         """
-        Ri-registra in Consul + Redis i distrattori GIÀ in catalogo (Mongo) che
+        Ri-registra in Consul + Redis tutti i servizi GIÀ in catalogo (Mongo) che
         non risultano nel registry, SENZA riscaricare/parsare nulla.
 
-        Serve quando i distrattori sono stati recuperati via reindex/backfill
-        (che toccano solo Mongo/Qdrant) ma non sono in Consul: in quel caso la
-        control-unit li scarterebbe come 'orphaned' e l'end-to-end non vedrebbe
-        il rumore. Sono distrattori i servizi con sample_rank valorizzato.
+        Serve quando i servizi sono stati caricati via /import/file (come i 275
+        SOCBench-D) ma non sono in Consul: in quel caso la control-unit li
+        scarterebbe come 'orphaned' e l'end-to-end non vedrebbe i servizi.
+
+        NOTA: a differenza di prima, questo metodo NON filtra su sample_rank,
+        perché i servizi SOCBench-D non hanno questo campo. Vengono registrati
+        tutti i servizi non già presenti in Consul.
+
+        Il health check è dirottato su GET /health del catalog-gateway (che
+        risponde sempre 200) invece di /status/{service_id} del
+        healthcheck-service, che richiede che il servizio sia stato registrato
+        in Redis con valore "true". Questo evita che i servizi vengano
+        marcati come critici da Consul solo perché il mock server non è
+        raggiungibile o perché il servizio non è stato ancora registrato in
+        Redis.
 
         Ritorna {"registered": n, "skipped": m, "errors": e}.
         """
@@ -1059,13 +1077,14 @@ class Service:
         registered = skipped = errors = 0
         for s in services:
             sid = s.get("_id")
-            # Solo distrattori (sample_rank valorizzato) e non già nel registry
-            if not sid or s.get("sample_rank") is None or sid in consul_ids:
+            # Registra TUTTI i servizi non già in Consul (non solo i distrattori)
+            if not sid or sid in consul_ids:
                 skipped += 1
                 continue
             try:
                 self.register_to_redis(sid, "true")
-                self.register_to_consul(sid, s.get("name", sid))
+                # Health check su endpoint "fantoccio" che risponde sempre 200
+                self.register_to_consul_with_dummy_healthcheck(sid, s.get("name", sid))
                 registered += 1
             except Exception as e:
                 print(f"[REGISTER] Failed {sid}: {e}")
@@ -1073,3 +1092,36 @@ class Service:
 
         print(f"[REGISTER] registered={registered} skipped={skipped} errors={errors}")
         return {"registered": registered, "skipped": skipped, "errors": errors}
+
+    def register_to_consul_with_dummy_healthcheck(self, service_id, service_name):
+        """
+        Registra il servizio in Consul con un health check che punta a un
+        endpoint "fantoccio" (GET /health del catalog-gateway) che risponde
+        sempre 200, invece di /status/{service_id} del healthcheck-service che
+        richiede che il servizio sia stato registrato in Redis con valore
+        "true".
+
+        Questo evita che i servizi vengano marcati come critici da Consul
+        solo perché il mock server non è raggiungibile o perché il servizio
+        non è stato ancora registrato in Redis.
+        """
+        payload = {
+            "Name": service_name,
+            "Id":   service_id,
+            "Meta": {"service_doc_id": service_id},
+            "Check": {
+                "TlsSkipVerify":                 True,
+                "Method":                         "GET",
+                "Http":                           f"http://{self.GATEWAY_HOST}:{self.GATEWAY_PORT}/health",
+                "Interval":                       "10s",
+                "Timeout":                        "5s",
+                "DeregisterCriticalServiceAfter": "30s"
+            }
+        }
+        try:
+            url      = f"http://{self.CONSUL_HOST}:{self.CONSUL_PORT}/v1/agent/service/register"
+            response = requests.put(url, json=payload)
+            print(f"Consul registration ({service_id}): HTTP {response.status_code}")
+        except Exception as e:
+            print(f"Failed to register to Consul: {e}")
+            raise

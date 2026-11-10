@@ -39,4 +39,16 @@ public class StatusResource {
         return Response.ok(message).build();
     }
 
+    /**
+     * Endpoint "fantoccio" che risponde sempre 200.
+     * Usato come health check per i servizi SOCBench-D registrati in Consul
+     * senza un mock server raggiungibile: evita che Consul li marchi come
+     * critici e la control-unit li scarti come 'orphaned'.
+     */
+    @GET
+    @Path("/ok")
+    public Response ok() {
+        return Response.ok("ok").build();
+    }
+
 }

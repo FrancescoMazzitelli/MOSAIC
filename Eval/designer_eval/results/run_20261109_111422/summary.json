@@ -1,0 +1,237 @@
+{
+  "run_dir": "/home/francesco/Desktop/MOSAIC/Eval/designer_eval/results/run_20261109_111422",
+  "catalog": "/home/francesco/Desktop/MOSAIC/Eval/designer_eval/catalog_snapshot.json",
+  "diagnostic": {
+    "n": 45,
+    "n_ood": 15,
+    "by_category": {
+      "OUT_OF_DOMAIN": {
+        "n": 15,
+        "reached": 15,
+        "reach_rate": 1.0,
+        "classification_correct": 15,
+        "classification_accuracy_reached": 1.0,
+        "end_to_end_correct": 15,
+        "end_to_end_accuracy": 1.0,
+        "nonempty_plan_pre": 0,
+        "silent_wrong_plan_pre": 0,
+        "silent_wrong_plan_pre_rate": 0.0,
+        "nonempty_plan_post": 0,
+        "silent_wrong_plan_post": 0,
+        "silent_wrong_plan_post_rate": 0.0,
+        "contract_yield": 15,
+        "contract_yield_rate": 1.0,
+        "contract_hard_valid": 15
+      },
+      "AMBIGUOUS": {
+        "n": 15,
+        "reached": 13,
+        "reach_rate": 0.8666666666666667,
+        "classification_correct": 12,
+        "classification_accuracy_reached": 0.9230769230769231,
+        "end_to_end_correct": 12,
+        "end_to_end_accuracy": 0.8,
+        "nonempty_plan_pre": 2,
+        "silent_wrong_plan_pre": 2,
+        "silent_wrong_plan_pre_rate": 0.13333333333333333,
+        "nonempty_plan_post": 2,
+        "silent_wrong_plan_post": 2,
+        "silent_wrong_plan_post_rate": 0.13333333333333333,
+        "contract_yield": 0,
+        "contract_yield_rate": 0.0,
+        "contract_hard_valid": 0
+      },
+      "INVALID": {
+        "n": 15,
+        "reached": 12,
+        "reach_rate": 0.8,
+        "classification_correct": 11,
+        "classification_accuracy_reached": 0.9166666666666666,
+        "end_to_end_correct": 11,
+        "end_to_end_accuracy": 0.7333333333333333,
+        "nonempty_plan_pre": 3,
+        "silent_wrong_plan_pre": 3,
+        "silent_wrong_plan_pre_rate": 0.2,
+        "nonempty_plan_post": 3,
+        "silent_wrong_plan_post": 3,
+        "silent_wrong_plan_post_rate": 0.2,
+        "contract_yield": 1,
+        "contract_yield_rate": 0.06666666666666667,
+        "contract_hard_valid": 1
+      }
+    },
+    "reached": 40,
+    "reach_rate": 0.8888888888888888,
+    "classification_correct": 38,
+    "classification_accuracy_reached": 0.95,
+    "end_to_end_correct": 38,
+    "end_to_end_accuracy": 0.8444444444444444,
+    "macro_f1_reached": 0.948136200716846,
+    "macro_f1_end_to_end": 0.8904818797291916,
+    "nonempty_plan_pre": 5,
+    "silent_wrong_plan_pre_rate": 0.1111111111111111,
+    "nonempty_plan_post": 5,
+    "silent_wrong_plan_post_rate": 0.1111111111111111,
+    "not_reached": 5,
+    "not_reached_rate": 0.1111111111111111,
+    "designer_unknown": 0,
+    "contract_yield": 15,
+    "contract_yield_rate": 1.0,
+    "contract_hard_valid": 15,
+    "contract_leakage": 1,
+    "confidence_intervals": {
+      "reach": [
+        0.7650062450910905,
+        0.9515959956217445
+      ],
+      "classification_reached": [
+        0.834958291820748,
+        0.9861796228538989
+      ],
+      "end_to_end": [
+        0.712158094887512,
+        0.9225467468867133
+      ],
+      "silent_wrong_pre": [
+        0.04840400437825558,
+        0.23499375490890945
+      ]
+    }
+  },
+  "smart_city": {
+    "n": 100,
+    "designer_activation": 2,
+    "designer_activation_rate": 0.02,
+    "designer_activation_ci": [
+      0.005501852234968185,
+      0.07001316294199365
+    ],
+    "predicted_ood": 1,
+    "predicted_ood_rate": 0.01,
+    "contract_activation": 1,
+    "contract_activation_rate": 0.01,
+    "ret_has_gold_known": 100,
+    "ret_has_gold": 96,
+    "ret_has_gold_rate": 0.96,
+    "fp_conditioned": 1,
+    "fp_conditioned_rate": 0.010416666666666666,
+    "fp_due_to_retrieval": 1,
+    "fp_due_to_retrieval_rate": 0.5
+  },
+  "abstention": {
+    "tp": 40,
+    "fp": 2,
+    "fn": 5,
+    "tn": 98,
+    "precision": 0.9523809523809523,
+    "recall": 0.8888888888888888,
+    "f1": 0.9195402298850575,
+    "false_positive_rate_in_domain": 0.02
+  },
+  "plausibility": {
+    "n_ood": 15,
+    "n_scored_pairs": 0,
+    "n_scored_queries": 0,
+    "mean": null,
+    "median": null,
+    "query_mean": null,
+    "query_median": null,
+    "usable_ge_3": 0,
+    "usable_ge_3_rate": 0.0,
+    "exact_agreement": null,
+    "within_one": null,
+    "weighted_kappa": null,
+    "icc21": null,
+    "semantic_reuse_yes": 0,
+    "semantic_reuse_no": 0,
+    "semantic_reuse_rate": null
+  },
+  "reuse": {
+    "contracts": 16,
+    "exact_reuse_contracts": 0,
+    "exact_reuse_rate": 0.0,
+    "mean_reuse_endpoint_rate": 0.0,
+    "duplicate_service_id": 0,
+    "duplicate_service_id_rate": 0.0
+  },
+  "confusion_matrix": [
+    {
+      "gold": "OUT_OF_DOMAIN",
+      "OUT_OF_DOMAIN": 15,
+      "AMBIGUOUS": 0,
+      "INVALID": 0,
+      "UNKNOWN": 0,
+      "NOT_REACHED": 0,
+      "ERROR": 0,
+      "total": 15
+    },
+    {
+      "gold": "AMBIGUOUS",
+      "OUT_OF_DOMAIN": 0,
+      "AMBIGUOUS": 12,
+      "INVALID": 1,
+      "UNKNOWN": 0,
+      "NOT_REACHED": 2,
+      "ERROR": 0,
+      "total": 15
+    },
+    {
+      "gold": "INVALID",
+      "OUT_OF_DOMAIN": 1,
+      "AMBIGUOUS": 0,
+      "INVALID": 11,
+      "UNKNOWN": 0,
+      "NOT_REACHED": 3,
+      "ERROR": 0,
+      "total": 15
+    }
+  ],
+  "route_breakdown": [
+    {
+      "set": "diagnostic",
+      "gold_category": "AMBIGUOUS",
+      "route_reason": "PLANNER_EMPTY_DESIGNER",
+      "count": 13
+    },
+    {
+      "set": "diagnostic",
+      "gold_category": "AMBIGUOUS",
+      "route_reason": "PLANNER_NONEMPTY",
+      "count": 2
+    },
+    {
+      "set": "diagnostic",
+      "gold_category": "INVALID",
+      "route_reason": "PLANNER_EMPTY_DESIGNER",
+      "count": 12
+    },
+    {
+      "set": "diagnostic",
+      "gold_category": "INVALID",
+      "route_reason": "PLANNER_NONEMPTY",
+      "count": 3
+    },
+    {
+      "set": "diagnostic",
+      "gold_category": "OUT_OF_DOMAIN",
+      "route_reason": "PLANNER_EMPTY_DESIGNER",
+      "count": 15
+    },
+    {
+      "set": "smart_city",
+      "gold_category": "IN_DOMAIN",
+      "route_reason": "PLANNER_EMPTY_DESIGNER",
+      "count": 2
+    },
+    {
+      "set": "smart_city",
+      "gold_category": "IN_DOMAIN",
+      "route_reason": "PLANNER_NONEMPTY",
+      "count": 98
+    }
+  ],
+  "scores_files": {
+    "A": "results/run_20261109_111422/contract_scores_A.csv",
+    "B": "results/run_20261109_111422/contract_scores_B.csv"
+  }
+}

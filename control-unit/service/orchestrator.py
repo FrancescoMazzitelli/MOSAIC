@@ -111,7 +111,7 @@ class Orchestrator:
         ]
 
     # -- ENTRY POINT (ex Controller.control) -----------------
-    def control(self, query, files=None, max_rank=None):
+    def control(self, query, files=None, max_rank=None, dry_run=False):
         """Punto di ingresso principale per l'orchestrazione della richiesta.
 
         Flusso generale:
@@ -124,6 +124,9 @@ class Orchestrator:
         Args:
             query (str): descrizione della richiesta dell'utente.
             files (list, optional): lista di file inviati dall'utente.
+            max_rank (int, optional): limita i servizi restituiti dal catalogo.
+            dry_run (bool): se True, si ferma dopo planning/validazione e non
+                esegue il piano. Usato dall'harness di valutazione del Designer.
 
         Returns:
             dict | flask.Response: dizionario con `execution_plan`,
@@ -134,6 +137,14 @@ class Orchestrator:
         # Salva metadati dei file caricati (se presenti) per il planner
         analyzed_files = self.analyze_files(files or [])
         planning_latency_s = None
+
+        # Metadati di routing usati dall'harness di valutazione. Sono additivi
+        # e non cambiano il comportamento del sistema.
+        route_reason = "UNKNOWN"
+        planner_status = None
+        planner_tasks_count = None
+        validated_tasks_count = None
+        designer_attempted = False
 
         # Determina la modalità di backend (MOCK o REAL)
         self.backend_mode = os.environ.get("BACKEND_MODE", "MOCK").upper()
@@ -164,6 +175,13 @@ class Orchestrator:
         if not service_list:
             return {"execution_plan": {}, "execution_results": [],
                     "error": "No services matched the query",
+                    "discovered": [],
+                    "route_reason": "NO_SERVICES",
+                    "planner_status": None,
+                    "planner_tasks_count": None,
+                    "validated_tasks_count": None,
+                    "designer_attempted": False,
+                    "dry_run": bool(dry_run),
                     "planning_latency_s": planning_latency_s}
 
         # Filtriamo solo i servizi effettivamente registrati nel registry
@@ -176,6 +194,13 @@ class Orchestrator:
         if not filtered_service_list:
             return {"execution_plan": {}, "execution_results": [],
                     "error": "None of the discovered services are currently available",
+                    "discovered": [],
+                    "route_reason": "REGISTRY_EMPTY",
+                    "planner_status": None,
+                    "planner_tasks_count": None,
+                    "validated_tasks_count": None,
+                    "designer_attempted": False,
+                    "dry_run": bool(dry_run),
                     "planning_latency_s": planning_latency_s}
 
         # Stampa di dettaglio per debug/monitoring
@@ -238,10 +263,27 @@ class Orchestrator:
         else:
             print("[SCHEMA VALIDATOR] Nessuna violazione rilevata.")
 
+        # Stato del planner, indipendente da quello che succede dopo la
+        # validazione. Serve all'harness per distinguere un piano non vuoto da
+        # un JSON malformato o da un piano svuotato durante l'auto-fix.
+        if isinstance(plan, dict) and isinstance(plan.get("tasks"), list):
+            planner_tasks_count = len(plan["tasks"])
+            planner_status = "EMPTY" if planner_tasks_count == 0 else "NONEMPTY"
+        else:
+            planner_status = "MALFORMED"
+
+        if planner_status == "EMPTY":
+            route_reason = "PLANNER_EMPTY_DESIGNER"
+        elif planner_status == "MALFORMED":
+            route_reason = "PLANNER_MALFORMED"
+        else:
+            route_reason = "PLANNER_NONEMPTY"
+
         # ---- PIANO VUOTO -> Designer (triage + design) ----
         # Se il planner non propone alcuna azione, attiviamo il modulo di design
         if self.planner.is_empty(plan):
             print("\n[ROUTING] Piano vuoto rilevato. Attivazione Designer (triage + design)...")
+            designer_attempted = True
             analysis = self.planner.diagnose_empty(query, plan, discovered, analyzed_files)
             category = analysis.get("category", "UNKNOWN")
             contract = analysis.get("service_contract")
@@ -260,6 +302,12 @@ class Orchestrator:
                 "suggested_api_contracts":  [contract] if isinstance(contract, dict) else [],
                 "discovered":               discovered_out,
                 "planning_latency_s":       planning_latency_s,
+                "route_reason":             "PLANNER_EMPTY_DESIGNER",
+                "planner_status":           "EMPTY",
+                "planner_tasks_count":      0,
+                "validated_tasks_count":    0,
+                "designer_attempted":       designer_attempted,
+                "dry_run":                  bool(dry_run),
             }
 
         # ---- VALIDAZIONE + AUTO-FIX ----
@@ -278,6 +326,31 @@ class Orchestrator:
                 # Se non è possibile riparare, annulliamo le attività
                 print("[VALIDATION] Piano non recuperabile - esecuzione annullata.")
                 plan["tasks"] = []
+
+        validated_tasks_count = (
+            len(plan.get("tasks", []))
+            if isinstance(plan, dict) and isinstance(plan.get("tasks"), list)
+            else 0
+        )
+        if planner_status == "NONEMPTY" and validated_tasks_count == 0:
+            route_reason = "POST_VALIDATION_EMPTY"
+
+        # Dry-run: fermati dopo planning + validazione. Utile per l'harness del
+        # Designer, che non deve eseguire piani potenzialmente write-side.
+        if dry_run:
+            return {
+                "execution_plan":        plan,
+                "execution_results":     [],
+                "error":                 None,
+                "discovered":            discovered_out,
+                "planning_latency_s":    planning_latency_s,
+                "route_reason":          route_reason,
+                "planner_status":        planner_status,
+                "planner_tasks_count":   planner_tasks_count,
+                "validated_tasks_count": validated_tasks_count,
+                "designer_attempted":    designer_attempted,
+                "dry_run":               True,
+            }
 
         # ---- EXECUTION ----
         # Eseguiamo il piano e raccogliamo i risultati
@@ -301,8 +374,14 @@ class Orchestrator:
 
         # Risposta finale contenente il piano e i risultati dell'esecuzione
         return {
-            "execution_plan":     plan,
-            "execution_results":  results,
-            "discovered":         discovered_out,
-            "planning_latency_s": planning_latency_s,
+            "execution_plan":        plan,
+            "execution_results":     results,
+            "discovered":            discovered_out,
+            "planning_latency_s":    planning_latency_s,
+            "route_reason":          route_reason,
+            "planner_status":        planner_status,
+            "planner_tasks_count":   planner_tasks_count,
+            "validated_tasks_count": validated_tasks_count,
+            "designer_attempted":    designer_attempted,
+            "dry_run":               False,
         }
