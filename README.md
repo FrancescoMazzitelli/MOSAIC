@@ -417,28 +417,3 @@ without re-running the protocol.
 | `mock-deployer` reported as exited | Expected: it is a one-shot import/registration job; check its logs if it exited non-zero |
 | Retrieval quality differs from the paper | Confirm `USE_LLM_DECOMPOSITION`, the embedding/reranker models, and the token budget |
 
----
-
-## Citation
-
-```bibtex
-@article{mazzitelli2026mosaic,
-  title   = {Natural Language-Driven API Composition with Enhanced
-             Retrieval-Augmented Generation and Reasoning},
-  author  = {Mazzitelli, Francesco Cosimo and Zimeo, Eugenio},
-  journal = {IEEE Transactions on Services Computing},
-  year    = {2026},
-  note    = {Manuscript}
-}
-```
-
-## Acknowledgments
-
-The authors thank Rita Lamparelli, who helped in developing the Designer component.
-Generative AI tools were used for writing checks; the authors validated all outputs and
-assume full responsibility for the content.
-
-## License
-
-The repository does not currently include a license file. Please contact the authors
-before reusing the code.
