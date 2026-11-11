@@ -1,14 +1,14 @@
-"""Executor del Control Unit.
+"""Control Unit Executor.
 
-Questo modulo esegue un piano di esecuzione JSON prodotto dal planner.
-Supporta:
-- risoluzione del chaining di placeholder tramite `PlaceholderResolver`,
-- dispatch asincrono di chiamate HTTP verso servizi remoti,
-- esecuzione in-process di task SQL con DuckDB,
-- raccolta del contesto dei risultati tra task.
+This module executes a JSON execution plan produced by the planner.
+It supports:
+- placeholder chaining resolution via `PlaceholderResolver`,
+- asynchronous dispatch of HTTP calls to remote services,
+- in-process execution of SQL tasks with DuckDB,
+- collection of the result context between tasks.
 
-L'`Executor` non ha dipendenze sull'LLM: riceve un piano già costruito e si
-limita a eseguirlo e a restituirne i risultati.
+The `Executor` has no dependency on the LLM: it receives an already built plan and
+only executes it and returns its results.
 """
 
 import os
@@ -26,13 +26,13 @@ from service.execution.placeholder_resolver import PlaceholderResolver
 
 
 class Executor:
-    """Esegue un piano di esecuzione JSON.
+    """Executes a JSON execution plan.
 
-    L'`Executor` gestisce le richieste reali verso i servizi e il calcolo SQL
-    interno. Il chaining tra task viene risolto tramite `PlaceholderResolver`.
+    The `Executor` handles the real requests to the services and the internal
+    SQL computation. The chaining between tasks is resolved via `PlaceholderResolver`.
 
-    La classe è progettata per mantenere separata la logica di esecuzione dalla
-    logica di pianificazione e dalle regole LLM.
+    The class is designed to keep the execution logic separate from the
+    planning logic and the LLM rules.
     """
 
     def __init__(self, resolver: PlaceholderResolver = None):
@@ -40,41 +40,41 @@ class Executor:
         self.backend_mode = "MOCK"
 
     def run(self, plan: dict, discovered_services, backend_mode: str = "MOCK"):
-        """Esegue il piano in modo sincrono.
+        """Executes the plan synchronously.
 
         Args:
-            plan (dict): piano JSON con la chiave `tasks`.
-            discovered_services (list): servizi scoperti usati dal task execution.
-            backend_mode (str): modalità di esecuzione, tipicamente 'MOCK' o 'REAL'.
+            plan (dict): JSON plan with the `tasks` key.
+            discovered_services (list): discovered services used by the task execution.
+            backend_mode (str): execution mode, typically 'MOCK' or 'REAL'.
 
         Returns:
-            list | dict: risultati della pipeline di esecuzione, o il risultato
-                di un file da scaricare se un task restituisce status FILE.
+            list | dict: results of the execution pipeline, or the result
+                of a file to download if a task returns status FILE.
         """
         self.backend_mode = backend_mode
         return asyncio.run(self.trigger_agents_async(plan, discovered_services))
 
-    # -- metodi spostati dalla vecchia Controller --------------------------
+    # -- methods moved from the old Controller -----------------------------
     def _build_auth_headers(self) -> dict:
         """
-        Costruisce gli header di autenticazione per le chiamate HTTP.
+        Builds the authentication headers for HTTP calls.
 
-        Sorgente: variabile d'ambiente API_AUTH_HEADERS contenente un JSON,
-        es.:
+        Source: API_AUTH_HEADERS environment variable containing a JSON,
+        e.g.:
             API_AUTH_HEADERS='{"Authorization": "Bearer xyz", "X-Api-Key": "abc"}'
 
-        Il formato JSON copre tutti i casi comuni senza cablare assunzioni:
-          - API key semplice  → {"X-Api-Key": "..."}
-          - Bearer token      → {"Authorization": "Bearer ..."}
-          - Header custom     → {"X-Custom": "..."}
-          - Più header insieme (es. auth + tracing) su stesso env var.
+        The JSON format covers all common cases without hardcoding assumptions:
+          - simple API key   → {"X-Api-Key": "..."}
+          - Bearer token     → {"Authorization": "Bearer ..."}
+          - custom header    → {"X-Custom": "..."}
+          - multiple headers together (e.g. auth + tracing) on the same env var.
 
-        Restituisce {} se la variabile non è settata o non è JSON valido,
-        caso tipico in MOCK mode (Microcks non richiede auth di default).
+        Returns {} if the variable is not set or is not valid JSON,
+        the typical case in MOCK mode (Microcks does not require auth by default).
 
-        Estensione futura: per-service via API_AUTH_HEADERS__<service_id>.
-        Il punto di iniezione (call_agent) passa già per questo metodo, basta
-        aggiungere qui la lettura condizionale senza toccare il chiamante.
+        Future extension: per-service via API_AUTH_HEADERS__<service_id>.
+        The injection point (call_agent) already goes through this method, it is enough
+        to add the conditional read here without touching the caller.
         """
         raw = os.environ.get("API_AUTH_HEADERS", "")
         if not raw:
@@ -83,28 +83,28 @@ class Executor:
             headers = json.loads(raw)
             if isinstance(headers, dict):
                 return {str(k): str(v) for k, v in headers.items()}
-            print(f"[AUTH] API_AUTH_HEADERS non è un oggetto JSON, ignorato")
+            print(f"[AUTH] API_AUTH_HEADERS is not a JSON object, ignored")
         except json.JSONDecodeError as e:
-            print(f"[AUTH] API_AUTH_HEADERS non è JSON valido ({e}), ignorato")
+            print(f"[AUTH] API_AUTH_HEADERS is not valid JSON ({e}), ignored")
         return {}
 
     async def call_agent(self, session, task, discovered_services):
-        """Invia una singola richiesta HTTP per un task non-SQL.
+        """Sends a single HTTP request for a non-SQL task.
 
-        Questo metodo supporta GET, POST, PUT, PATCH e DELETE. Gestisce:
-        - risoluzione di endpoint relativi in MOCK mode,
-        - normalizzazione della query string,
-        - autenticazione via API_AUTH_HEADERS,
-        - form-data multipart per tag FILE/TEXT custom nel payload.
+        This method supports GET, POST, PUT, PATCH and DELETE. It handles:
+        - resolution of relative endpoints in MOCK mode,
+        - query string normalization,
+        - authentication via API_AUTH_HEADERS,
+        - multipart form-data for custom FILE/TEXT tags in the payload.
 
         Args:
-            session (aiohttp.ClientSession): sessione HTTP asincrona.
-            task (dict): descrizione del task da eseguire.
-            discovered_services (list): servizi scoperti, non usati direttamente qui ma
-                mantenuti per compatibilità con il comportamento passato.
+            session (aiohttp.ClientSession): asynchronous HTTP session.
+            task (dict): description of the task to execute.
+            discovered_services (list): discovered services, not used directly here but
+                kept for compatibility with the past behavior.
 
         Returns:
-            dict: risultato con chiavi `task_name`, `operation`, `url_template`,
+            dict: result with keys `task_name`, `operation`, `url_template`,
                 `url_resolved`, `status`, `status_code`, `result`.
         """
         task_name  = task.get("task_name") or "unnamed_task"
@@ -112,19 +112,19 @@ class Executor:
         input_data = task.get("input", "")
         operation  = str(task.get("operation") or "GET").upper()
 
-        # Strip di un eventuale prefisso di metodo HTTP ("GET /path" → "/path").
-        # NB: NON usare endpoint.split(" ")[-1] — spezzerebbe gli URL con spazi nel
-        # query string (es. ?query=The Dark Knight → "Knight"), causando 404.
+        # Strip any HTTP method prefix ("GET /path" → "/path").
+        # NB: do NOT use endpoint.split(" ")[-1] — it would break URLs with spaces in the
+        # query string (e.g. ?query=The Dark Knight → "Knight"), causing 404.
         _verb = re.match(r'^\s*(?:GET|POST|PUT|DELETE|PATCH)\s+(\S.*)$', endpoint, re.IGNORECASE)
         if _verb:
             endpoint = _verb.group(1).strip()
-        # Prepend di MOCK_SERVER_URL solo in MOCK mode. In REAL un URL non-http
-        # è un bug di planning: lasciamo che la request fallisca naturalmente.
+        # Prepend MOCK_SERVER_URL only in MOCK mode. In REAL a non-http URL
+        # is a planning bug: let the request fail naturally.
         if self.backend_mode == "MOCK" and endpoint and not endpoint.startswith("http"):
             mock_url = os.environ.get("MOCK_SERVER_URL", "http://mock-server:8080")
             endpoint = f"{mock_url}{endpoint}" if endpoint.startswith("/") else f"{mock_url}/{endpoint}"
-        # Ricodifica difensiva del query string: rende l'URL robusto a spazi e
-        # caratteri non-encoded emessi dal planner (es. ?query=The Dark Knight).
+        # Defensive query string re-encoding: makes the URL robust against spaces and
+        # non-encoded characters emitted by the planner (e.g. ?query=The Dark Knight).
         if endpoint.startswith("http") and "?" in endpoint:
             _p = urlsplit(endpoint)
             endpoint = urlunsplit(
@@ -134,18 +134,18 @@ class Executor:
         response_result = {
             "task_name": task_name,
             "operation": operation,
-            # URL pianificato dal planner (può contenere {{...}})
+            # URL planned by the planner (may contain {{...}})
             "url_template": task.get("url", ""),
-            # URL realmente usato nella chiamata HTTP (placeholder già risolti)
+            # URL actually used in the HTTP call (placeholders already resolved)
             "url_resolved": endpoint,
         }
 
         if not endpoint or not endpoint.strip():
-            print(f"[WARN] Task fantasma '{task_name}' ignorato.")
+            print(f"[WARN] Ghost task '{task_name}' ignored.")
             response_result.update({"status": "SUCCESS", "status_code": 200, "result": {}})
             return response_result
 
-        # Header di autenticazione (vuoto se non configurato, es. MOCK)
+        # Authentication headers (empty if not configured, e.g. MOCK)
         auth_headers = self._build_auth_headers()
 
         try:
@@ -169,7 +169,7 @@ class Executor:
             elif operation in ("POST", "PUT", "PATCH"):
                 if tag_matches:
                     form_data  = aiohttp.FormData()
-                    open_files = []   # traccia file aperti per chiuderli dopo la request
+                    open_files = []   # track opened files to close them after the request
                     for tag_type, tag_content in tag_matches:
                         tag_content = tag_content.strip()
                         if tag_type == "FILE":
@@ -232,19 +232,19 @@ class Executor:
 
     def _execute_sql_task(self, task: dict, context: dict) -> dict:
         """
-        Esegue un task SQL (operation: SQL) usando DuckDB in-process.
+        Executes a SQL task (operation: SQL) using in-process DuckDB.
 
-        Ogni entry dell'execution_context viene registrata come tabella DuckDB
-        con il nome del task che l'ha prodotta. La query SQL nel campo 'input'
-        può referenziare qualsiasi task precedente direttamente per nome,
-        senza bisogno di placeholder JMESPath {{...}}.
+        Each entry of the execution_context is registered as a DuckDB table
+        with the name of the task that produced it. The SQL query in the 'input' field
+        can reference any previous task directly by name,
+        without needing JMESPath {{...}} placeholders.
 
-        Restituisce un dict compatibile con il formato dei risultati di call_agent.
+        Returns a dict compatible with the call_agent result format.
         """
         task_name  = task.get("task_name") or "sql_task"
         input_data = task.get("input", {})
 
-        # input è un oggetto {"sql_query": "SELECT ..."} — estrae la query
+        # input is an object {"sql_query": "SELECT ..."} — extract the query
         if isinstance(input_data, dict):
             sql_query = input_data.get("sql_query", "")
         else:
@@ -262,12 +262,12 @@ class Executor:
         tail = "..." if len(sql_query) > 120 else ""
         print(f"[SQL] Task '{task_name}': {sql_query[:120]}{tail}")
 
-        # Non riscrivere la query SQL con regex: può corrompere token validi
-        # (es. ORDER BY). Se il task_name è una keyword riservata, la query
-        # fallirà e verrà gestita dal blocco except.
+        # Do not rewrite the SQL query with regex: it can corrupt valid tokens
+        # (e.g. ORDER BY). If task_name is a reserved keyword, the query
+        # will fail and be handled by the except block.
 
         try:
-            conn = duckdb.connect()   # database in-memory, isolato per ogni task
+            conn = duckdb.connect()   # in-memory database, isolated per task
         except Exception as e:
             return {
                 "task_name":   task_name,
@@ -278,15 +278,15 @@ class Executor:
             }
 
         try:
-            # Registra ogni risultato precedente come tabella DuckDB
+            # Register each previous result as a DuckDB table
             for tbl, data in context.items():
                 escaped_tbl = str(tbl).replace('"', '""')
 
                 if isinstance(data, list):
                     if not data:
-                        # Lista vuota: registra tabella sentinel — colonne sconosciute
-                        # producono Binder Error se la query le referenzia,
-                        # gestito nel blocco except come graceful empty result
+                        # Empty list: register a sentinel table — unknown columns
+                        # produce a Binder Error if the query references them,
+                        # handled in the except block as a graceful empty result
                         conn.execute(f'CREATE TABLE "{escaped_tbl}" (dummy VARCHAR)')
                     else:
                         df = pd.DataFrame(data)
@@ -307,11 +307,11 @@ class Executor:
                     if isinstance(val, float) and math.isnan(val):
                         val = None                  # NaN → null JSON
                     elif hasattr(val, 'isoformat'):
-                        val = val.isoformat()       # datetime → stringa ISO
+                        val = val.isoformat()       # datetime → ISO string
                     row_dict[col] = val
                 result.append(row_dict)
 
-            print(f"[SQL] Task '{task_name}' completato — {len(result)} righe.")
+            print(f"[SQL] Task '{task_name}' completed — {len(result)} rows.")
             return {
                 "task_name":   task_name,
                 "operation":   "SQL",
@@ -326,7 +326,7 @@ class Executor:
 
             
             if "Binder Error" in error_msg or "dummy" in error_msg:
-                print(f"[SQL WARN] Task '{task_name}': Binder Error su tabella vuota — restituito risultato vuoto")
+                print(f"[SQL WARN] Task '{task_name}': Binder Error on empty table — returned empty result")
                 return {
                     "task_name":   task_name,
                     "operation":   "SQL",
@@ -344,26 +344,26 @@ class Executor:
             }
 
         finally:
-            conn.close()   # garantisce chiusura anche in caso di eccezione
+            conn.close()   # guarantees closure even on exception
 
     async def trigger_agents_async(self, agents: dict, discovered_services):
-        """Esegue i task del piano in modalità asincrona.
+        """Executes the plan tasks asynchronously.
 
-        Per ogni task in `agents['tasks']`:
-        - risolve i placeholder JMESPath tramite `PlaceholderResolver`;
-        - esegue i task HTTP con `call_agent()`;
-        - esegue i task SQL con `_execute_sql_task()`;
-        - aggiorna il `context` con i risultati dei task riusciti.
+        For each task in `agents['tasks']`:
+        - resolves JMESPath placeholders via `PlaceholderResolver`;
+        - executes HTTP tasks with `call_agent()`;
+        - executes SQL tasks with `_execute_sql_task()`;
+        - updates the `context` with the results of successful tasks.
 
-        Se un task restituisce uno stato `FILE`, la pipeline termina
-        immediatamente restituendo quel risultato.
+        If a task returns a `FILE` status, the pipeline stops
+        immediately and returns that result.
 
         Args:
-            agents (dict): piano di esecuzione con chiave `tasks`.
-            discovered_services (list): servizi scoperti usati per compatibilità.
+            agents (dict): execution plan with the `tasks` key.
+            discovered_services (list): discovered services used for compatibility.
 
         Returns:
-            list | dict: risultati dei task eseguiti o il risultato FILE.
+            list | dict: results of the executed tasks or the FILE result.
         """
         results = []
         context = {}
@@ -371,12 +371,12 @@ class Executor:
             for task in agents.get("tasks", []):
                 operation = str(task.get("operation") or "GET").upper()
 
-                # ── SQL task: esecuzione DuckDB in-process ────────────────────
+                # ── SQL task: in-process DuckDB execution ─────────────────────
                 if operation == "SQL":
                     result = self._execute_sql_task(task, context)
                 else:
-                    # Mantiene il template LLM in task['url'] per il client,
-                    # usa endpoint separato per la chiamata effettiva.
+                    # Keep the LLM template in task['url'] for the client,
+                    # use a separate endpoint for the actual call.
                     task["endpoint"] = self.resolver.resolve_placeholders(task.get("url") or "", context)
                     task["url_resolved"] = task["endpoint"]
                     if task.get("input"):
@@ -395,6 +395,6 @@ class Executor:
                         print(f"[CONTEXT] '{name}' returned non-JSON ({type(raw).__name__}) — not stored in chain context")
                         context[name] = {}
                 else:
-                    print(f"[CHAIN BROKEN] '{name}' fallito. Interruzione pipeline.")
+                    print(f"[CHAIN BROKEN] '{name}' failed. Pipeline interrupted.")
                     break
         return results

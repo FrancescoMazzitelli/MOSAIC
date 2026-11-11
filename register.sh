@@ -10,7 +10,7 @@ VERSION="1.0"
 for api_file in "$APIS_DIR"/*.yaml; do
   echo "Debug: Processing file '$api_file'"
 
-  # Legge il titolo rimuovendo sia \r (Windows CRLF) che \n residui
+  # Reads the title, removing both \r (Windows CRLF) and residual \n
   raw_title=$(grep -m 1 "^[[:space:]]*title:" "$api_file" \
     | sed 's/^[[:space:]]*title:[[:space:]]*//' \
     | tr -d "'\"" \
@@ -19,7 +19,7 @@ for api_file in "$APIS_DIR"/*.yaml; do
 
   echo "Debug: Real service_name read from YAML = '$raw_title'"
 
-  # Codifica spazi e & nell'URL
+  # Encode spaces and & in the URL
   service_url_part=$(echo "$raw_title" | sed 's/ /+/g' | sed 's/&/%26/g')
 
   register_url="${MOCK_BASE_URL}/${service_url_part}/${VERSION}/register"

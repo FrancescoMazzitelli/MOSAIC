@@ -1,19 +1,19 @@
-"""Orchestrator del Control Unit.
+"""Control Unit Orchestrator.
 
-Questo modulo definisce la classe `Orchestrator` che coordina la pipeline
-principale dell'unità di controllo: discovery -> planning -> execution.
+This module defines the `Orchestrator` class, which coordinates the
+control unit's main pipeline: discovery -> planning -> execution.
 
-La responsabilità principale dell'`Orchestrator` è:
-- interrogare il catalogo per trovare servizi rilevanti per una query;
-- filtrare i servizi effettivamente registrati nel registry;
-- delegare la generazione del piano al `Planner`;
-- validare e, se possibile, riparare il piano con `PlanValidator`;
-- eseguire il piano tramite `Executor` e restituire i risultati.
+The main responsibilities of the `Orchestrator` are:
+- querying the catalog to find services relevant to a query;
+- filtering the services actually registered in the registry;
+- delegating plan generation to the `Planner`;
+- validating and, where possible, repairing the plan with `PlanValidator`;
+- executing the plan through the `Executor` and returning the results.
 
-Le risposte del metodo `control()` sono strutturate come dizionari con
-chiavi quali `execution_plan`, `execution_results`, `error` e
-`planning_latency_s`. In caso il risultato sia un file da scaricare,
-viene restituito un oggetto `flask.Response`.
+The responses of the `control()` method are structured as dictionaries with
+keys such as `execution_plan`, `execution_results`, `error` and
+`planning_latency_s`. If the result is a file to download,
+a `flask.Response` object is returned.
 """
 
 import os
@@ -31,16 +31,16 @@ from service.execution.executor import Executor
 
 
 class Orchestrator:
-    """Coordina discovery, planning e execution.
+    """Coordinates discovery, planning and execution.
 
-    Attributi principali:
-    - `model_name` (str): nome del modello LLM usato dal `Planner`.
-    - `backend_mode` (str): modalità di backend ('MOCK' o 'REAL').
-    - `planner` (Planner): istanza responsabile della generazione dei piani.
-    - `executor` (Executor): istanza responsabile dell'esecuzione del piano.
+    Main attributes:
+    - `model_name` (str): name of the LLM model used by the `Planner`.
+    - `backend_mode` (str): backend mode ('MOCK' or 'REAL').
+    - `planner` (Planner): instance responsible for generating plans.
+    - `executor` (Executor): instance responsible for executing the plan.
 
-    Il costruttore crea anche una cartella `Files` per il salvataggio
-    temporaneo di file inviati dall'utente.
+    The constructor also creates a `Files` folder for temporarily
+    storing files uploaded by the user.
     """
 
     def __init__(self):
@@ -52,16 +52,16 @@ class Orchestrator:
 
     
     def analyze_files(self, files: list):
-        """Analizza e salva file caricati dall'utente.
+        """Analyzes and saves files uploaded by the user.
 
-        Ogni file viene salvato nella cartella `Files` e viene restituito
-        un elenco di dizionari con metadati utili al `Planner`.
+        Each file is saved in the `Files` folder and a list of dictionaries
+        with metadata useful to the `Planner` is returned.
 
         Args:
-            files (list): lista di oggetti file (es. da Flask `request.files`).
+            files (list): list of file objects (e.g. from Flask `request.files`).
 
         Returns:
-            list: lista di dizionari con chiavi `filename`, `content_type`,
+            list: list of dictionaries with keys `filename`, `content_type`,
                   `size`, `path`, `category`.
         """
         analyzed = []
@@ -87,19 +87,19 @@ class Orchestrator:
         return analyzed
 
     def replace_endpoints(self, endpoints_list, mock_server_address):
-        """Sostituisce gli URL dei mock se in modalità `MOCK`.
+        """Replaces mock URLs when in `MOCK` mode.
 
-        Alcuni servizi registrati nel catalogo possono puntare a
-        `http://localhost:8585` (configurazione Microcks). Quando l'orchestrator
-        gira in container, questa funzione riscrive quegli URL con
-        `mock_server_address` in modo che i mock siano raggiungibili.
+        Some services registered in the catalog may point to
+        `http://localhost:8585` (Microcks configuration). When the orchestrator
+        runs in a container, this function rewrites those URLs with
+        `mock_server_address` so that the mocks are reachable.
 
         Args:
-            endpoints_list (list): lista di dizionari con endpoint.
-            mock_server_address (str): indirizzo del mock server da usare.
+            endpoints_list (list): list of dictionaries with endpoints.
+            mock_server_address (str): address of the mock server to use.
 
         Returns:
-            list: lista di endpoint con URL eventualmente riscritti.
+            list: list of endpoints with URLs possibly rewritten.
         """
         if self.backend_mode == "REAL":
             return endpoints_list
@@ -112,66 +112,66 @@ class Orchestrator:
 
     # -- ENTRY POINT (ex Controller.control) -----------------
     def control(self, query, files=None, max_rank=None, dry_run=False):
-        """Punto di ingresso principale per l'orchestrazione della richiesta.
+        """Main entry point for request orchestration.
 
-        Flusso generale:
-        1. Analizza eventuali file caricati.
-        2. Recupera i servizi dal catalogo e filtra quelli registrati.
-        3. Richiama il `Planner` per ottenere un piano di esecuzione.
-        4. Valida (e tenta di riparare) il piano.
-        5. Invia il piano all'`Executor` e raccoglie i risultati.
+        General flow:
+        1. Analyze any uploaded files.
+        2. Retrieve services from the catalog and filter the registered ones.
+        3. Call the `Planner` to obtain an execution plan.
+        4. Validate (and attempt to repair) the plan.
+        5. Send the plan to the `Executor` and collect the results.
 
         Args:
-            query (str): descrizione della richiesta dell'utente.
-            files (list, optional): lista di file inviati dall'utente.
-            max_rank (int, optional): limita i servizi restituiti dal catalogo.
-            dry_run (bool): se True, si ferma dopo planning/validazione e non
-                esegue il piano. Usato dall'harness di valutazione del Designer.
+            query (str): description of the user's request.
+            files (list, optional): list of files uploaded by the user.
+            max_rank (int, optional): limits the services returned by the catalog.
+            dry_run (bool): if True, stops after planning/validation and does not
+                execute the plan. Used by the Designer evaluation harness.
 
         Returns:
-            dict | flask.Response: dizionario con `execution_plan`,
-                `execution_results`, `error`, `planning_latency_s`, o un
-                `flask.Response` se il risultato è un file da scaricare.
+            dict | flask.Response: dictionary with `execution_plan`,
+                `execution_results`, `error`, `planning_latency_s`, or a
+                `flask.Response` if the result is a file to download.
         """
 
-        # Salva metadati dei file caricati (se presenti) per il planner
+        # Save metadata of uploaded files (if any) for the planner
         analyzed_files = self.analyze_files(files or [])
         planning_latency_s = None
 
-        # Metadati di routing usati dall'harness di valutazione. Sono additivi
-        # e non cambiano il comportamento del sistema.
+        # Routing metadata used by the evaluation harness. They are additive
+        # and do not change the system's behavior.
         route_reason = "UNKNOWN"
         planner_status = None
         planner_tasks_count = None
         validated_tasks_count = None
         designer_attempted = False
 
-        # Determina la modalità di backend (MOCK o REAL)
+        # Determine the backend mode (MOCK or REAL)
         self.backend_mode = os.environ.get("BACKEND_MODE", "MOCK").upper()
         if self.backend_mode not in ("MOCK", "REAL"):
-            # Se valore non riconosciuto, torniamo a MOCK per sicurezza
-            print(f"[BACKEND_MODE] valore non riconosciuto '{self.backend_mode}', fallback su MOCK")
+            # If the value is not recognized, fall back to MOCK for safety
+            print(f"[BACKEND_MODE] unrecognized value '{self.backend_mode}', falling back to MOCK")
             self.backend_mode = "MOCK"
         print(f"[BACKEND_MODE] {self.backend_mode}")
 
-        # Configurazioni esterne: URL dei servizi di catalogo/registry/mock
+        # External configuration: URLs of the catalog/registry/mock services
         catalog_url  = os.environ.get("CATALOG_URL",     "http://catalog-gateway:5000")
         registry_url = os.environ.get("REGISTRY_URL",    "http://registry:8500")
         mock_url     = os.environ.get("MOCK_SERVER_URL", "http://mock-server:8080")
 
-        # Discovery: otteniamo la lista dei servizi dal registry
+        # Discovery: get the list of services from the registry
         registry     = Discovery(registry_url)
         services     = registry.services()
-        # Interroghiamo il catalogo per trovare servizi rilevanti alla query.
-        # max_rank (se presente) limita i distrattori considerati — usato dal
-        # test di robustezza per simulare un catalogo con N distrattori.
+        # Query the catalog to find services relevant to the query.
+        # max_rank (if present) limits the distractors considered — used by the
+        # robustness test to simulate a catalog with N distractors.
         search_payload = {"query": query}
         if max_rank is not None:
             search_payload["max_rank"] = max_rank
         service_data = requests.post(f"{catalog_url}/index/search", json=search_payload).json()
         service_list = service_data.get("results", [])
 
-        # Nessun servizio trovato -> risposta di errore esplicita
+        # No service found -> explicit error response
         if not service_list:
             return {"execution_plan": {}, "execution_results": [],
                     "error": "No services matched the query",
@@ -184,13 +184,13 @@ class Orchestrator:
                     "dry_run": bool(dry_run),
                     "planning_latency_s": planning_latency_s}
 
-        # Filtriamo solo i servizi effettivamente registrati nel registry
+        # Keep only the services actually registered in the registry
         registry_ids          = {s["id"] for s in services}
         filtered_service_list = [s for s in service_list if s["_id"] in registry_ids]
         orphaned              = [s for s in service_list if s["_id"] not in registry_ids]
         if orphaned:
-            # Log dei servizi presenti nel catalogo ma non nel registry
-            print("[WARNING] Servizi non piu' nel registry:", [s.get("_id") for s in orphaned])
+            # Log services present in the catalog but not in the registry
+            print("[WARNING] Services no longer in the registry:", [s.get("_id") for s in orphaned])
         if not filtered_service_list:
             return {"execution_plan": {}, "execution_results": [],
                     "error": "None of the discovered services are currently available",
@@ -203,7 +203,7 @@ class Orchestrator:
                     "dry_run": bool(dry_run),
                     "planning_latency_s": planning_latency_s}
 
-        # Stampa di dettaglio per debug/monitoring
+        # Detailed output for debug/monitoring
         print("\n" + "=" * 60)
         print(f"[RETRIEVAL] Query: {query}")
         for s in filtered_service_list:
@@ -212,11 +212,11 @@ class Orchestrator:
             print(f"    {list(caps.keys())}")
         print("=" * 60 + "\n")
 
-        # Normalizziamo e raccogliamo le informazioni utili dal catalogo
+        # Normalize and collect the useful information from the catalog
         disc_services, disc_caps, disc_eps = [], [], []
         disc_schemas, disc_req_schemas, disc_params = [], [], []
         for s in filtered_service_list:
-            # Rimuoviamo l'endpoint di registrazione interno se presente
+            # Remove the internal registration endpoint if present
             if isinstance(s.get("capabilities"), dict): s["capabilities"].pop("POST /register", None)
             if isinstance(s.get("endpoints"), dict):    s["endpoints"].pop("POST /register", None)
             disc_services.append({"_id": s.get("_id"), "name": s.get("name"),
@@ -227,20 +227,20 @@ class Orchestrator:
             disc_req_schemas.append(s.get("request_schemas", {}))
             disc_params.append(s.get("parameters", {}))
 
-        # Riscriviamo gli endpoint per i mock quando necessario con l'indirizzo del mock server raggiungibile dai container
+        # Rewrite the mock endpoints when needed with the mock server address reachable from the containers
         disc_eps = self.replace_endpoints(disc_eps, mock_url)
 
-        # Struttura dati complessiva da passare al planner
+        # Overall data structure to pass to the planner
         discovered = {
             "services": disc_services, "capabilities": disc_caps, "endpoints": disc_eps,
             "response_schemas": disc_schemas, "request_schemas": disc_req_schemas,
             "parameters": disc_params,
         }
 
-        # Vista compatta dei servizi recuperati (ordinati come dal retrieval, già
-        # filtrati per registry): id + capability. Esposta nella risposta così il
-        # test può calcolare le metriche di retrieval su ciò che l'LLM ha visto,
-        # senza dover scrapare i log.
+        # Compact view of the retrieved services (ordered as from retrieval, already
+        # filtered by registry): id + capability. Exposed in the response so the
+        # test can compute retrieval metrics on what the LLM saw,
+        # without having to scrape the logs.
         discovered_out = [
             {"_id": disc_services[i]["_id"],
              "name": disc_services[i]["name"],
@@ -249,23 +249,23 @@ class Orchestrator:
         ]
 
         # ---- PLANNING ----
-        # Chiediamo al planner di costruire un piano a partire dalla query
+        # Ask the planner to build a plan from the query
         plan, planning_latency_s, schema_warnings = self.planner.plan(
             query, discovered, analyzed_files, self.backend_mode)
 
-        # Report delle eventuali violazioni di schema rilevate dal validator
+        # Report any schema violations detected by the validator
         if schema_warnings:
             print(f"\n{'WARN ' * 10}")
-            print(f"[SCHEMA VALIDATOR] {len(schema_warnings)} violazione/i rilevata/e:")
+            print(f"[SCHEMA VALIDATOR] {len(schema_warnings)} violation(s) detected:")
             for w in schema_warnings:
                 print(f"  {w}")
             print(f"{'WARN ' * 10}\n")
         else:
-            print("[SCHEMA VALIDATOR] Nessuna violazione rilevata.")
+            print("[SCHEMA VALIDATOR] No violations detected.")
 
-        # Stato del planner, indipendente da quello che succede dopo la
-        # validazione. Serve all'harness per distinguere un piano non vuoto da
-        # un JSON malformato o da un piano svuotato durante l'auto-fix.
+        # Planner status, independent of what happens after
+        # validation. Used by the harness to distinguish a non-empty plan from
+        # malformed JSON or from a plan emptied during auto-fix.
         if isinstance(plan, dict) and isinstance(plan.get("tasks"), list):
             planner_tasks_count = len(plan["tasks"])
             planner_status = "EMPTY" if planner_tasks_count == 0 else "NONEMPTY"
@@ -279,10 +279,10 @@ class Orchestrator:
         else:
             route_reason = "PLANNER_NONEMPTY"
 
-        # ---- PIANO VUOTO -> Designer (triage + design) ----
-        # Se il planner non propone alcuna azione, attiviamo il modulo di design
+        # ---- EMPTY PLAN -> Designer (triage + design) ----
+        # If the planner proposes no action, activate the design module
         if self.planner.is_empty(plan):
-            print("\n[ROUTING] Piano vuoto rilevato. Attivazione Designer (triage + design)...")
+            print("\n[ROUTING] Empty plan detected. Activating Designer (triage + design)...")
             designer_attempted = True
             analysis = self.planner.diagnose_empty(query, plan, discovered, analyzed_files)
             category = analysis.get("category", "UNKNOWN")
@@ -310,21 +310,21 @@ class Orchestrator:
                 "dry_run":                  bool(dry_run),
             }
 
-        # ---- VALIDAZIONE + AUTO-FIX ----
-        # Validiamo il piano rispetto ai servizi effettivamente disponibili
-        available_ids = [s["_id"] for s in disc_services] # Lista degli ID dei servizi disponibili (dopo filtraggio registry)
-        name_to_id    = {s.get("name"): s.get("_id") for s in disc_services} # Mappatura nome->ID per eventuale auto-fix
+        # ---- VALIDATION + AUTO-FIX ----
+        # Validate the plan against the services actually available
+        available_ids = [s["_id"] for s in disc_services] # List of available service IDs (after registry filtering)
+        name_to_id    = {s.get("name"): s.get("_id") for s in disc_services} # name->ID mapping for possible auto-fix
         is_valid, val_errors = PlanValidator.validate(plan, available_ids)
         if not is_valid:
-            print(f"[VALIDATION] {len(val_errors)} errore/i:")
+            print(f"[VALIDATION] {len(val_errors)} error(s):")
             for e in val_errors:
                 print(f"  - {e}")
-            # Tentativo di riparazione automatica del piano
+            # Attempt automatic plan repair
             plan = self.planner.repair(plan, available_ids, name_to_id)
             is_valid, val_errors = PlanValidator.validate(plan, available_ids)
             if not is_valid:
-                # Se non è possibile riparare, annulliamo le attività
-                print("[VALIDATION] Piano non recuperabile - esecuzione annullata.")
+                # If repair is not possible, cancel the tasks
+                print("[VALIDATION] Plan cannot be recovered - execution cancelled.")
                 plan["tasks"] = []
 
         validated_tasks_count = (
@@ -335,8 +335,8 @@ class Orchestrator:
         if planner_status == "NONEMPTY" and validated_tasks_count == 0:
             route_reason = "POST_VALIDATION_EMPTY"
 
-        # Dry-run: fermati dopo planning + validazione. Utile per l'harness del
-        # Designer, che non deve eseguire piani potenzialmente write-side.
+        # Dry-run: stop after planning + validation. Useful for the Designer
+        # harness, which must not execute potentially write-side plans.
         if dry_run:
             return {
                 "execution_plan":        plan,
@@ -353,15 +353,15 @@ class Orchestrator:
             }
 
         # ---- EXECUTION ----
-        # Eseguiamo il piano e raccogliamo i risultati
+        # Execute the plan and collect the results
         results = self.executor.run(plan, disc_services, self.backend_mode)
 
-        # Se l'executor ritorna un file, lo restituiamo come Response
+        # If the executor returns a file, return it as a Response
         if isinstance(results, dict) and results.get("status") == "FILE":
             return Response(results["body"], status=results["status_code"],
                             headers=results["headers"])
 
-        # Pulizia dei file temporanei salvati in `Files`
+        # Clean up the temporary files saved in `Files`
         if os.path.exists("Files"):
             for filename in os.listdir("Files"):
                 file_path = os.path.join("Files", filename)
@@ -369,10 +369,10 @@ class Orchestrator:
                     if os.path.isfile(file_path): os.unlink(file_path)
                     elif os.path.isdir(file_path): shutil.rmtree(file_path)
                 except Exception as e:
-                    # Non blocchiamo l'esecuzione in caso di errore di pulizia
-                    print(f"[WARN] Pulizia fallita: {e}")
+                    # Do not block execution on a cleanup error
+                    print(f"[WARN] Cleanup failed: {e}")
 
-        # Risposta finale contenente il piano e i risultati dell'esecuzione
+        # Final response containing the plan and the execution results
         return {
             "execution_plan":        plan,
             "execution_results":     results,

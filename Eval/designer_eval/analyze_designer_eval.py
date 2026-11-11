@@ -519,7 +519,7 @@ def summary_markdown(metrics: dict[str, Any]) -> str:
     lines.append("")
     lines.append("## Diagnostic set (45)")
     lines.append("")
-    lines.append("| Classe | N | Reach | Class. acc. (reached) | End-to-end | Nonempty pre | Nonempty post | Contract yield |")
+    lines.append("| Class | N | Reach | Class. acc. (reached) | End-to-end | Nonempty pre | Nonempty post | Contract yield |")
     lines.append("|---|---:|---:|---:|---:|---:|---:|---:|")
     for category in CATEGORIES:
         item = diag["by_category"][category]
@@ -532,7 +532,7 @@ def summary_markdown(metrics: dict[str, Any]) -> str:
             f"{proportion_text(item['contract_yield'], item['n'])} |"
         )
     lines.append(
-        f"| **Totale** | {diag['n']} | {proportion_text(diag['reached'], diag['n'])} | "
+        f"| **Total** | {diag['n']} | {proportion_text(diag['reached'], diag['n'])} | "
         f"{pct(diag['classification_accuracy_reached'])} | "
         f"{proportion_text(diag['end_to_end_correct'], diag['n'])} | "
         f"{proportion_text(diag['nonempty_plan_pre'], diag['n'])} | "
@@ -540,20 +540,20 @@ def summary_markdown(metrics: dict[str, Any]) -> str:
         f"{proportion_text(diag['contract_yield'], diag['n_ood'] or 1)} |"
     )
     lines.append("")
-    lines.append("`Nonempty pre` = il planner ha prodotto almeno un task (il Designer non è stato raggiunto).")
-    lines.append("`Nonempty post` = dopo validazione/auto-fix restano task eseguibili.")
-    lines.append("`Contract yield` è calcolato sulle sole 15 query OOD.")
+    lines.append("`Nonempty pre` = the planner produced at least one task (the Designer was not reached).")
+    lines.append("`Nonempty post` = after validation/auto-fix, executable tasks remain.")
+    lines.append("`Contract yield` is computed on the 15 OOD queries only.")
     lines.append("")
     lines.append("## Contract validity (OOD)")
     lines.append("")
     if diag["contract_yield"]:
-        lines.append(f"- Contract hard-valid: {proportion_text(diag['contract_hard_valid'], diag['contract_yield'])} sui contratti prodotti")
+        lines.append(f"- Contract hard-valid: {proportion_text(diag['contract_hard_valid'], diag['contract_yield'])} of the produced contracts")
     else:
-        lines.append("- Contract hard-valid: n/a (nessun contratto prodotto)")
+        lines.append("- Contract hard-valid: n/a (no contract produced)")
     if diag["n"] - diag["n_ood"]:
-        lines.append(f"- Contract leakage su query non-OOD: {proportion_text(diag['contract_leakage'], diag['n'] - diag['n_ood'])}")
+        lines.append(f"- Contract leakage on non-OOD queries: {proportion_text(diag['contract_leakage'], diag['n'] - diag['n_ood'])}")
     else:
-        lines.append("- Contract leakage su query non-OOD: n/a")
+        lines.append("- Contract leakage on non-OOD queries: n/a")
     lines.append("")
     lines.append("## Confusion matrix")
     lines.append("")
@@ -566,7 +566,7 @@ def summary_markdown(metrics: dict[str, Any]) -> str:
     lines.append("")
     lines.append("## Smart-city 100 (in-domain)")
     lines.append("")
-    lines.append("| Metrica | Valore |")
+    lines.append("| Metric | Value |")
     lines.append("|---|---:|")
     lines.append(f"| Designer activation (FP route) | {proportion_text(smart['designer_activation'], smart['n'])} |")
     lines.append(f"| Designer says OUT_OF_DOMAIN | {proportion_text(smart['predicted_ood'], smart['n'])} |")
@@ -596,30 +596,30 @@ def summary_markdown(metrics: dict[str, Any]) -> str:
     lines.append("")
     plaus = metrics["plausibility"]
     if plaus["n_scored_pairs"]:
-        lines.append(f"- Coppie valutate: {plaus['n_scored_pairs']}")
-        lines.append(f"- Media (tutti i voti): {plaus['mean']:.2f}")
-        lines.append(f"- Mediana (tutti i voti): {plaus['median']:.2f}")
-        lines.append(f"- Media per query: {plaus['query_mean']:.2f}")
-        lines.append(f"- Contract usabili (media >= 3): {proportion_text(plaus['usable_ge_3'], plaus['n_ood'])}")
-        lines.append(f"- Accordo esatto: {pct(plaus['exact_agreement'])}")
-        lines.append(f"- Entro 1 punto: {pct(plaus['within_one'])}")
+        lines.append(f"- Scored pairs: {plaus['n_scored_pairs']}")
+        lines.append(f"- Mean (all scores): {plaus['mean']:.2f}")
+        lines.append(f"- Median (all scores): {plaus['median']:.2f}")
+        lines.append(f"- Mean per query: {plaus['query_mean']:.2f}")
+        lines.append(f"- Usable contracts (mean >= 3): {proportion_text(plaus['usable_ge_3'], plaus['n_ood'])}")
+        lines.append(f"- Exact agreement: {pct(plaus['exact_agreement'])}")
+        lines.append(f"- Within 1 point: {pct(plaus['within_one'])}")
         lines.append(f"- Weighted kappa: {plaus['weighted_kappa']:.3f}" if plaus['weighted_kappa'] is not None else "- Weighted kappa: n/a")
         lines.append(f"- ICC(2,1): {plaus['icc21']:.3f}" if plaus['icc21'] is not None else "- ICC(2,1): n/a")
         semantic_total = plaus['semantic_reuse_yes'] + plaus['semantic_reuse_no']
         lines.append(
-            f"- Riuso semantico dichiarato: {proportion_text(plaus['semantic_reuse_yes'], semantic_total or 1)}"
+            f"- Declared semantic reuse: {proportion_text(plaus['semantic_reuse_yes'], semantic_total or 1)}"
         )
     else:
-        lines.append("Nessun punteggio disponibile. Compila `contracts_to_review_A.csv` e `_B.csv`.")
+        lines.append("No scores available. Fill in `contracts_to_review_A.csv` and `_B.csv`.")
     lines.append("")
     lines.append("## Reuse")
     lines.append("")
     reuse = metrics["reuse"]
-    lines.append(f"- Contract totali: {reuse['contracts']}")
-    lines.append(f"- Contract con almeno un endpoint già nel catalogo: {proportion_text(reuse['exact_reuse_contracts'], reuse['contracts'])}")
+    lines.append(f"- Total contracts: {reuse['contracts']}")
+    lines.append(f"- Contracts with at least one endpoint already in the catalog: {proportion_text(reuse['exact_reuse_contracts'], reuse['contracts'])}")
     if reuse["mean_reuse_endpoint_rate"] is not None:
-        lines.append(f"- Percentuale media di endpoint riusati: {pct(reuse['mean_reuse_endpoint_rate'])}")
-    lines.append(f"- service_id duplicati: {proportion_text(reuse['duplicate_service_id'], reuse['contracts'])}")
+        lines.append(f"- Mean share of reused endpoints: {pct(reuse['mean_reuse_endpoint_rate'])}")
+    lines.append(f"- duplicate service_id: {proportion_text(reuse['duplicate_service_id'], reuse['contracts'])}")
     lines.append("")
     lines.append("## Failure breakdown")
     lines.append("")
@@ -646,7 +646,7 @@ def main() -> int:
         for row in rows
     ):
         print(
-            "[WARN] Il file query non è adjudicated: i risultati sono provvisori.",
+            "[WARN] The query file is not adjudicated: results are provisional.",
             file=sys.stderr,
         )
 
@@ -733,13 +733,13 @@ def main() -> int:
         summary_markdown(metrics), encoding="utf-8"
     )
 
-    print(f"Analisi scritta in: {out_dir}")
+    print(f"Analysis written to: {out_dir}")
     print(f"  summary.md:          {out_dir / 'summary.md'}")
     print(f"  summary.json:        {out_dir / 'summary.json'}")
     print(f"  confusion_matrix:    {out_dir / 'confusion_matrix.csv'}")
     print(f"  failure_breakdown:   {out_dir / 'failure_breakdown.csv'}")
-    print(f"  contratti da votare: {run_dir / 'contracts_to_review_A.csv'}")
-    print(f"  contratti da votare: {run_dir / 'contracts_to_review_B.csv'}")
+    print(f"  contracts to score: {run_dir / 'contracts_to_review_A.csv'}")
+    print(f"  contracts to score: {run_dir / 'contracts_to_review_B.csv'}")
     return 0
 
 

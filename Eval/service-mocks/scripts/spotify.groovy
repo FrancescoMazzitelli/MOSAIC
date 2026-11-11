@@ -114,5 +114,5 @@ try {
     }
 } catch (Exception e) { println "[consul] FAILED: ${e.message}"; return "fail" }
 
-println "[spotify] ✅ ${capabilities.size()} endpoints registrati"
+println "[spotify] ✅ ${capabilities.size()} endpoints registered"
 return "ok"

@@ -9,7 +9,7 @@ import tempfile
 api = Namespace("importer", description="External API import and management")
 import_parser = reqparse.RequestParser()
 
-# Parser per upload file
+# Parser for file upload
 upload_parser = reqparse.RequestParser()
 upload_parser.add_argument("file",       location="files", type=FileStorage, required=True, help="OpenAPI YAML or JSON file")
 upload_parser.add_argument("id",         location="form",  type=str,         required=True, help="Service ID")
@@ -21,21 +21,21 @@ upload_parser.add_argument("base_url", location="form", type=str, required=False
 class ImportAPI(Resource):
     def post(self):
         """
-        Importa provider da apis.guru.
+        Import providers from apis.guru.
 
-        Body JSON opzionale (o query string):
+        Optional JSON body (or query string):
           { "limit": 200, "seed": 42, "offset": 0 }
-        - limit assente  → importa TUTTI i provider (comportamento originale)
-        - limit = N      → importa la fetta [offset:N] campionata in modo
-                           riproducibile e nidificato (per la curva a gradini).
-                           offset permette di importare solo i NUOVI provider a
-                           ogni gradino (es. offset=50, limit=100 → i secondi 50).
+        - limit absent   → import ALL providers (original behavior)
+        - limit = N      → import the slice [offset:N] sampled in a
+                           reproducible, nested way (for the step curve).
+                           offset lets you import only the NEW providers at
+                           each step (e.g. offset=50, limit=100 → the second 50).
         """
         data = request.get_json(silent=True) or {}
 
         limit = data.get("limit")
         if limit is None:
-            limit = request.args.get("limit", type=int)   # None se assente
+            limit = request.args.get("limit", type=int)   # None if absent
         seed   = data.get("seed",   request.args.get("seed",   default=42, type=int))
         offset = data.get("offset", request.args.get("offset", default=0,  type=int))
 
@@ -51,11 +51,11 @@ class ImportAPI(Resource):
 class BackfillRanks(Resource):
     def post(self):
         """
-        Tagga i distrattori GIÀ in catalogo con sample_rank, senza riscaricare
-        nulla da apis.guru. Usalo una volta sui 200 già caricati per abilitare
-        il filtro max_rank del gateway.
+        Tag distractors ALREADY in the catalog with sample_rank, without
+        re-downloading anything from apis.guru. Use it once on the 200 already
+        loaded to enable the gateway's max_rank filter.
 
-        Body JSON opzionale: { "seed": 42 }
+        Optional JSON body: { "seed": 42 }
         """
         data = request.get_json(silent=True) or {}
         seed = data.get("seed", request.args.get("seed", default=42, type=int))
@@ -71,9 +71,9 @@ class BackfillRanks(Resource):
 class RegisterExisting(Resource):
     def post(self):
         """
-        Ri-registra in Consul + Redis i distrattori già in catalogo (Mongo) ma
-        assenti dal registry, senza riscaricare nulla. Necessario per la fase
-        end-to-end dopo un recupero via reindex/backfill.
+        Re-register in Consul + Redis the distractors already in the catalog
+        (Mongo) but missing from the registry, without re-downloading anything.
+        Required for the end-to-end phase after a reindex/backfill recovery.
         """
         import_service = importService.Service()
         try:
@@ -86,7 +86,7 @@ class RegisterExisting(Resource):
 @api.route("/import/<key>")
 class ImportSpecificAPI(Resource):
     def post(self, key):
-        """Importa un singolo provider da apis.guru tramite chiave (es: stripe.com)"""
+        """Import a single apis.guru provider by key (e.g. stripe.com)"""
         import_service = importService.Service()
         try:
             providers = import_service.fetch_providers()
@@ -109,12 +109,12 @@ class ImportSpecificAPI(Resource):
 class ImportFromUrl(Resource):
     def post(self):
         """
-        Importa un servizio a partire da un URL OpenAPI YAML/JSON pubblico.
+        Import a service from a public OpenAPI YAML/JSON URL.
 
-        Body JSON:
+        JSON body:
           {
-            "id":          "restcountries",          (obbligatorio — service ID univoco)
-            "swagger_url": "https://..."             (obbligatorio — URL dello spec OpenAPI)
+            "id":          "restcountries",          (required — unique service ID)
+            "swagger_url": "https://..."             (required — OpenAPI spec URL)
           }
         """
         data = request.get_json(force=True)
@@ -155,23 +155,23 @@ class ImportFromFile(Resource):
     @api.expect(upload_parser)
     def post(self):
         """
-        Importa un servizio caricando direttamente un file OpenAPI YAML o JSON.
+        Import a service by uploading an OpenAPI YAML or JSON file directly.
 
         Form data:
-          file — il file .yaml / .json OpenAPI  (obbligatorio)
-          id   — service ID univoco             (obbligatorio)
+          file — the OpenAPI .yaml / .json file  (required)
+          id   — unique service ID               (required)
         """
         args = upload_parser.parse_args()
         uploaded_file = args["file"]
         service_id    = args.get("id") or args.get("service_id")
-        base_url      = args.get("base_url") # <--- ESTRAI IL NUOVO PARAMETRO
+        base_url      = args.get("base_url") # <--- EXTRACT THE NEW PARAMETER
 
         if not service_id:
             return {"error": "Missing required field: 'id'"}, 400
         if not uploaded_file:
             return {"error": "Missing required field: 'file'"}, 400
 
-        # Salva il file in una posizione temporanea
+        # Save the file to a temporary location
         suffix = os.path.splitext(uploaded_file.filename)[1] or ".yaml"
         try:
             with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
@@ -181,7 +181,7 @@ class ImportFromFile(Resource):
             return {"error": f"Failed to save uploaded file: {e}"}, 500
 
         try:
-            # prance accetta sia URL http:// che path file://
+            # prance accepts both http:// URLs and file:// paths
             swagger_url = f"file://{tmp_path}"
 
             import_service = importService.Service()
@@ -204,7 +204,7 @@ class ImportFromFile(Resource):
             return {"error": str(e)}, 500
 
         finally:
-            # Pulizia file temporaneo
+            # Clean up temporary file
             try:
                 os.unlink(tmp_path)
             except Exception:
@@ -215,15 +215,15 @@ class ImportFromFile(Resource):
 class EnrichSchemas(Resource):
     def post(self):
         """
-        Scarica gli YAML da Microcks tramite prance, estrae response_schemas
-        per ogni servizio registrato in MongoDB e aggiorna i documenti
-        tramite PATCH /services/<id>/schemas sul catalog-gateway.
+        Download YAMLs from Microcks through prance, extract response_schemas
+        for each service registered in MongoDB, and update the documents
+        via PATCH /services/<id>/schemas on the catalog-gateway.
 
-        Body JSON opzionale:
+        Optional JSON body:
           { "mock_server_url": "http://mock-server:8080" }
           { "service_id": "smart-charging-stations-mock" }
 
-        Risposta:
+        Response:
           { "enriched": 5, "skipped": 1, "errors": 0 }
         """
         data            = request.get_json(silent=True) or {}

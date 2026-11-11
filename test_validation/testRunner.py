@@ -1,63 +1,63 @@
 """
 testRunner.py (v4.1)
 ====================
-Test runner per LADARAG-Extended: Validazione dell'Execution Plan e Robustezza.
+Test runner for LADARAG-Extended: Execution Plan validation and robustness.
 
-Questo modulo si occupa di inviare query al Control Unit, ricevere i piani 
-di esecuzione (o le risposte di fallback) e valutarli confrontandoli con 
-un oracolo definito in un dataset CSV.
+This module sends queries to the Control Unit, receives the execution plans
+(or the fallback responses) and evaluates them against an oracle defined in
+a CSV dataset.
 
-La valutazione si articola in due flussi principali, a seconda della natura 
-della query (Normale vs Out-of-Plan).
+Evaluation follows two main flows, depending on the nature of the query
+(Normal vs Out-of-Plan).
 
-1. FLUSSO STANDARD (Query Eseguibili)
+1. STANDARD FLOW (Executable queries)
 -------------------------------------
-Applica una valutazione multidimensionale a 4 Livelli (Layers):
+Applies a 4-layer multidimensional evaluation:
 
-    * L1_plan (Selezione API)
-      Verifica che i task generati (Metodo HTTP e Path) corrispondano 
-      ai passi previsti dall'oracolo. 
-      Verdetti: PASS (perfetto), PARTIAL (manca qualche API), FAIL (nessuna API corretta).
+    * L1_plan (API selection)
+      Checks that the generated tasks (HTTP method and path) match
+      the steps expected by the oracle.
+      Verdicts: PASS (perfect), PARTIAL (some API missing), FAIL (no correct API).
     
-    * L2_execution (Esecuzione Mock)
-      Verifica il successo reale delle chiamate. Fallisce se almeno un task 
-      riporta uno status diverso da "SUCCESS" o un codice HTTP fuori dal range 200-299.
+    * L2_execution (Mock execution)
+      Checks that the calls actually succeed. Fails if at least one task
+      reports a status other than "SUCCESS" or an HTTP code outside the 200-299 range.
     
-    * L3_chaining (Risoluzione Dipendenze)
-      Verifica che i placeholder dinamici (es. {{id}}) generati nei task 
-      precedenti siano stati correttamente sostituiti con valori reali 
-      nel campo 'url_resolved' (o 'url').
+    * L3_chaining (Dependency resolution)
+      Checks that the dynamic placeholders (e.g. {{id}}) generated in previous
+      tasks were correctly replaced with real values in the 'url_resolved'
+      field (or 'url').
     
-    * L4_schema (Validazione Payload)
-      Verifica la correttezza del body ('input') inviato al server. 
-      Si applica solo a POST e PUT: fallisce se il body è assente, vuoto, 
-      o se contiene chiavi con valori null/vuoti ("").
+    * L4_schema (Payload validation)
+      Checks the correctness of the body ('input') sent to the server.
+      Applies only to POST and PUT: fails if the body is missing, empty,
+      or contains keys with null/empty ("") values.
 
-2. FLUSSO OUT-OF-PLAN (Gestione Anomalie e Designer)
-----------------------------------------------------
-Per le query marcate nel CSV come 'out-of-domain', 'ambiguous' o 'invalid', 
-lo script si aspetta che il sistema non esegua nulla e attivi il Designer.
-I livelli vengono riadattati:
+2. OUT-OF-PLAN FLOW (Anomaly handling and Designer)
+---------------------------------------------------
+For queries marked in the CSV as 'out-of-domain', 'ambiguous' or 'invalid',
+the script expects the system to execute nothing and activate the Designer.
+The layers are adapted:
 
-    * L1_plan: Verifica che l'array 'tasks' sia vuoto e che la categoria 
-      assegnata dal Designer (empty_plan_category) coincida con l'attesa.
-    * L2_execution: Verifica la coerenza dei contratti API ('suggested_api_contracts').
-      - Per OUT_OF_DOMAIN: Esige un contratto valido con id '*-mock' e schemi.
-      - Per AMBIGUOUS/INVALID: Esige che NON ci siano contratti suggeriti.
-    * L3_chaining e L4_schema: Vengono saltati (SKIP).
+    * L1_plan: Checks that the 'tasks' array is empty and that the category
+      assigned by the Designer (empty_plan_category) matches the expectation.
+    * L2_execution: Checks the consistency of the API contracts ('suggested_api_contracts').
+      - For OUT_OF_DOMAIN: requires a valid contract with id '*-mock' and schemas.
+      - For AMBIGUOUS/INVALID: requires that there are NO suggested contracts.
+    * L3_chaining and L4_schema: skipped (SKIP).
 
-VERDETTO FINALE (Aggregato)
----------------------------
-Il risultato finale per singola run può essere:
-    * CORRECT   : Tutti i layer valutati hanno restituito PASS (o SKIP).
-    * INCORRECT : Il Livello 1 (selezione) ha fallito completamente (FAIL).
-    * PARTIAL   : Il sistema ha azzeccato in parte la selezione API, ma 
-                  l'esecuzione o la formattazione (L2, L3, L4) è fallita.
+FINAL VERDICT (Aggregate)
+-------------------------
+The final result for each run can be:
+    * CORRECT   : All evaluated layers returned PASS (or SKIP).
+    * INCORRECT : Layer 1 (selection) failed completely (FAIL).
+    * PARTIAL   : The system got the API selection partly right, but
+                  execution or formatting (L2, L3, L4) failed.
 
-USO:
-----
+USAGE:
+------
     $ python testRunner.py
-    $ python testRunner.py --csv <nome_file.csv> --runs 3
+    $ python testRunner.py --csv <file_name.csv> --runs 3
     $ python testRunner.py --only-csv-categories out-of-domain ambiguous invalid
 """
 
@@ -78,7 +78,7 @@ from datetime import datetime
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CONFIGURAZIONE
+# CONFIGURATION
 # ─────────────────────────────────────────────────────────────────────────────
 
 DEFAULTS = {
@@ -89,9 +89,9 @@ DEFAULTS = {
     "delay":       0.3,
 }
 
-# Mapping colonna CSV Category → etichetta attesa da empty_plan_category
-# Una riga CSV la cui Category e' in questa mappa viene valutata con
-# check_out_of_plan() invece di evaluate_all_layers().
+# Mapping CSV Category column → label expected by empty_plan_category
+# A CSV row whose Category is in this map is evaluated with
+# check_out_of_plan() instead of evaluate_all_layers().
 OUT_OF_PLAN_MAPPING = {
     "out-of-domain": "OUT_OF_DOMAIN",
     "ambiguous":     "AMBIGUOUS",
@@ -134,7 +134,7 @@ def extract_from_task(task):
 
 
 def _oracle_path_matches(t_path: str, o_path: str) -> bool:
-    """Confronta path task/oracle con supporto placeholder OpenAPI {paramName}."""
+    """Compare task/oracle paths, supporting OpenAPI placeholders {paramName}."""
     if '{' not in o_path:
         return t_path.endswith(o_path)
     segments = re.split(r'\{[^}]+\}', o_path)
@@ -147,8 +147,8 @@ def infer_category(oracle_steps, query):
     methods = [m for m, _ in oracle_steps]
     paths   = [p for _, p in oracle_steps]
 
-    # Oracle vuoto = query out-of-plan (out-of-domain / ambiguous / invalid).
-    # La vera classificazione la fa il Designer, qui solo placeholder per i report.
+    # Empty oracle = out-of-plan query (out-of-domain / ambiguous / invalid).
+    # The actual classification is done by the Designer; here it is only a placeholder for the reports.
     if n == 0:
         return "out-of-plan"
 
@@ -163,9 +163,9 @@ def infer_category(oracle_steps, query):
     if n == 2:
         if set(methods) == {"GET", "POST"}:
             return "get-post"
-        # Catene intra-servizio a 2 step unificate sotto "chaining":
-        #   GET -> GET/{id}        (lettura del dettaglio, ex "get-then-get")
-        #   GET -> PUT/DELETE/{id} (aggiornamento, ex "chaining-find-put")
+        # Two-step intra-service chains unified under "chaining":
+        #   GET -> GET/{id}        (detail read, formerly "get-then-get")
+        #   GET -> PUT/DELETE/{id} (update, formerly "chaining-find-put")
         if methods == ["GET", "GET"] or set(methods) in ({"GET", "PUT"}, {"GET", "DELETE"}):
             return "chaining"
         return "two-step"
@@ -174,7 +174,7 @@ def infer_category(oracle_steps, query):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ORACLE MULTI-DIMENSIONALE — 4 LAYER (query eseguibili)
+# MULTI-DIMENSIONAL ORACLE — 4 LAYERS (executable queries)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def check_layer1_plan(tasks, oracle_steps):
@@ -188,7 +188,7 @@ def check_layer1_plan(tasks, oracle_steps):
     matched_oracle = set()
     matches        = []
     mismatches     = []
-    duplicates     = []   # chiamate ridondanti verso un endpoint gia presente nell'oracle
+    duplicates     = []   # redundant calls to an endpoint already present in the oracle
 
     for t_method, t_path in filtered_tasks:
         found = False
@@ -201,12 +201,12 @@ def check_layer1_plan(tasks, oracle_steps):
                 found = True
                 break
         if not found:
-            # Il task non aggancia un NUOVO step dell'oracle. Si distinguono due casi:
-            #  - duplicato: corrisponde comunque a un endpoint gia presente nell'oracle.
-            #    Tipico del vincolo "un parametro per request" del mock, che costringe a
-            #    splittare un filtro multiplo in piu GET single-param sullo stesso endpoint
-            #    (+ un'aggregazione SQL a valle). Non e un errore di pianificazione: NON e un FP.
-            #  - estraneo: non corrisponde ad ALCUN endpoint dell'oracle -> falso positivo reale.
+            # The task does not match a NEW oracle step. Two cases are distinguished:
+            #  - duplicate: it still corresponds to an endpoint already present in the oracle.
+            #    Typical of the mock's "one parameter per request" constraint, which forces
+            #    splitting a multi-filter into several single-param GETs on the same endpoint
+            #    (+ a downstream SQL aggregation). This is not a planning error: it is NOT an FP.
+            #  - extraneous: it does not correspond to ANY endpoint of the oracle -> real false positive.
             is_duplicate = any(
                 t_method == o_method and _oracle_path_matches(t_path, o_path)
                 for o_method, o_path in filtered_oracle
@@ -217,7 +217,7 @@ def check_layer1_plan(tasks, oracle_steps):
                 mismatches.append({"task": (t_method, t_path)})
 
     tp = len(matches)
-    fp = len(mismatches)          # solo endpoint estranei all'oracle
+    fp = len(mismatches)          # only endpoints extraneous to the oracle
     fn = len(filtered_oracle) - tp
 
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
@@ -244,7 +244,7 @@ def check_layer1_plan(tasks, oracle_steps):
 
 def check_layer2_execution(execution_results):
     if not execution_results:
-        return {"verdict": "SKIP", "details": "Nessun risultato di esecuzione",
+        return {"verdict": "SKIP", "details": "No execution results",
                 "failed": [], "total": 0, "passed": 0}
 
     failed = []
@@ -265,26 +265,25 @@ def check_layer2_execution(execution_results):
 
 def check_layer3_chaining(tasks, execution_results):
     """
-    Verifica che i placeholder {{...}} nelle URL siano stati risolti.
+    Checks that the {{...}} placeholders in the URLs have been resolved.
 
-    Legge 'url_resolved' (URL post-sostituzione prodotto dal Controller)
-    se presente, altrimenti fa fallback su 'url' (che può contenere il
-    template con i placeholder). In questo modo non vengono segnalati
-    come errori i casi in cui la sostituzione è effettivamente avvenuta
-    ma il campo 'url' del task conserva ancora la sintassi originale
-    per tracciabilità.
+    Reads 'url_resolved' (the post-substitution URL produced by the Controller)
+    if present, otherwise falls back to 'url' (which may still contain the
+    template with the placeholders). This way, cases where the substitution
+    actually happened but the task's 'url' field still keeps the original
+    syntax for traceability are not reported as errors.
     """
     issues = []
     for task in tasks:
-        # Preferisci url_resolved (post-sostituzione) a url (template con {{...}})
+        # Prefer url_resolved (post-substitution) over url (template with {{...}})
         url       = str(task.get("url_resolved") or task.get("url", ""))
         task_name = task.get("task_name", "unnamed")
         if re.search(r'\{\{.*?\}\}', url):
-            issues.append(f"{task_name}: placeholder non risolto in URL")
+            issues.append(f"{task_name}: unresolved placeholder in URL")
             continue
         path = urlparse(url).path
         if re.search(r'//+', path):
-            issues.append(f"{task_name}: segmento vuoto nell'URL (placeholder risolto a '')")
+            issues.append(f"{task_name}: empty segment in the URL (placeholder resolved to '')")
     return {"verdict": "PASS" if not issues else "FAIL", "issues": issues}
 
 
@@ -297,12 +296,12 @@ def check_layer4_schema(tasks, execution_results):
         task_name = task.get("task_name", "unnamed")
         body      = task.get("input", {})
         if not body or body == "":
-            issues.append(f"{task_name}: body {operation} vuoto o assente")
+            issues.append(f"{task_name}: {operation} body empty or missing")
             continue
         if isinstance(body, dict):
             empty_fields = [k for k, v in body.items() if v == "" or v is None]
             if empty_fields:
-                issues.append(f"{task_name}: campi vuoti/null nel body: {empty_fields}")
+                issues.append(f"{task_name}: empty/null fields in the body: {empty_fields}")
     return {"verdict": "PASS" if not issues else "FAIL", "issues": issues}
 
 
@@ -332,32 +331,32 @@ def evaluate_all_layers(data, oracle_steps, tasks):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# VALUTATORE QUERY OUT-OF-PLAN (nuovo in v4)
+# OUT-OF-PLAN QUERY VALIDATOR (new in v4)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def check_out_of_plan(data: dict, expected_category: str) -> dict:
     """
-    Valutatore per query la cui risposta attesa NON e' un piano eseguibile.
+    Validator for queries whose expected response is NOT an executable plan.
 
-    Queste sono le query marcate nel CSV con Category ∈ {out-of-domain,
-    ambiguous, invalid}. Per esse il flusso atteso e':
-        planner → tasks=[] → Controller delega al Designer → risposta
-        con empty_plan_category + suggested_api_contracts.
+    These are the queries marked in the CSV with Category ∈ {out-of-domain,
+    ambiguous, invalid}. For them the expected flow is:
+        planner → tasks=[] → Controller delegates to the Designer → response
+        with empty_plan_category + suggested_api_contracts.
 
-    Check:
-      L1_plan       — tasks effettivamente vuoto + empty_plan_category == expected
-      L2_execution  — coerenza suggested_api_contracts:
-                        OUT_OF_DOMAIN  → contract non vuoto, service_id
+    Checks:
+      L1_plan       — tasks actually empty + empty_plan_category == expected
+      L2_execution  — consistency of suggested_api_contracts:
+                        OUT_OF_DOMAIN  → non-empty contract, service_id
                                          kebab-case + '-mock' (HC-3),
-                                         almeno un endpoint (HC-2),
-                                         response_schema presente sui GET (HC-5)
-                        AMBIGUOUS/INVALID → nessun contratto
+                                         at least one endpoint (HC-2),
+                                         response_schema present on GETs (HC-5)
+                        AMBIGUOUS/INVALID → no contract
       L3_chaining   — SKIP
       L4_schema     — SKIP
 
-    Ritorna dict compatibile con evaluate_all_layers (stesse chiavi,
-    stesso layout: il resto del runner non deve sapere che tipo di
-    query sta valutando).
+    Returns a dict compatible with evaluate_all_layers (same keys,
+    same layout: the rest of the runner must not know which kind of
+    query it is evaluating).
     """
     tasks     = data.get("execution_plan", {}).get("tasks", [])
     got_cat   = data.get("empty_plan_category", "")
@@ -366,7 +365,7 @@ def check_out_of_plan(data: dict, expected_category: str) -> dict:
     plan_issues     = []
     contract_issues = []
 
-    # ── L1_plan — classificazione del Designer ───────────────────────────────
+    # ── L1_plan — Designer classification ────────────────────────────────────
     if len(tasks) != 0:
         plan_issues.append(f"expected tasks=[], got len={len(tasks)}")
     if got_cat != expected_category:
@@ -374,43 +373,43 @@ def check_out_of_plan(data: dict, expected_category: str) -> dict:
             f"expected empty_plan_category='{expected_category}', got='{got_cat}'"
         )
 
-    # ── L2_execution — coerenza del contratto suggerito ──────────────────────
+    # ── L2_execution — consistency of the suggested contract ─────────────────
     if expected_category == "OUT_OF_DOMAIN":
         if not contracts:
             contract_issues.append(
-                "expected OUT_OF_DOMAIN → suggested_api_contracts non vuoto, got []"
+                "expected OUT_OF_DOMAIN → suggested_api_contracts not empty, got []"
             )
         else:
             c   = contracts[0]
             sid = c.get("service_id", "")
             if not re.match(r"^[a-z][a-z0-9-]*-mock$", sid):
                 contract_issues.append(
-                    f"service_id '{sid}' non rispetta HC-3 (kebab-case + '-mock')"
+                    f"service_id '{sid}' violates HC-3 (kebab-case + '-mock')"
                 )
             eps = c.get("suggested_endpoints", [])
             if not eps:
-                contract_issues.append("suggested_endpoints vuoto (HC-2)")
+                contract_issues.append("suggested_endpoints empty (HC-2)")
             else:
                 for i, ep in enumerate(eps):
                     if ep.get("method") == "GET" and not ep.get("response_schema"):
                         contract_issues.append(
                             f"endpoint #{i} ({ep.get('method')} {ep.get('path')}): "
-                            f"response_schema vuoto (HC-5)"
+                            f"response_schema empty (HC-5)"
                         )
     else:
-        # AMBIGUOUS / INVALID: il Designer non deve produrre contratti
+        # AMBIGUOUS / INVALID: the Designer must not produce contracts
         if contracts:
             contract_issues.append(
-                f"expected {expected_category} → nessun contract atteso, "
+                f"expected {expected_category} → no contract expected, "
                 f"got {len(contracts)}"
             )
 
     l1_verdict = "PASS" if not plan_issues     else "FAIL"
     l2_verdict = "PASS" if not contract_issues else "FAIL"
 
-    # Mantengo nomi di layer identici a evaluate_all_layers, cosi' il
-    # resto del runner stampa uniformemente. Aggiungo anche chiavi
-    # 'matches'/'mismatches' vuote perche' il codice di stampa le legge.
+    # Keep layer names identical to evaluate_all_layers, so that the
+    # rest of the runner prints uniformly. Also add empty 'matches'/
+    # 'mismatches' keys because the printing code reads them.
     layers = {
         "L1_plan": {
             "verdict": l1_verdict,
@@ -455,7 +454,7 @@ def check_out_of_plan(data: dict, expected_category: str) -> dict:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SINGOLA CHIAMATA HTTP
+# SINGLE HTTP CALL
 # ─────────────────────────────────────────────────────────────────────────────
 
 def run_query(question, control_url, timeout):
@@ -467,9 +466,9 @@ def run_query(question, control_url, timeout):
         return {"ok": True, "data": response.json(), "latency": latency,
                 "http_status": response.status_code}
     except req.exceptions.Timeout:
-        return {"ok": False, "error": f"Timeout dopo {timeout}s", "latency": timeout}
+        return {"ok": False, "error": f"Timeout after {timeout}s", "latency": timeout}
     except req.exceptions.ConnectionError as e:
-        return {"ok": False, "error": f"Connessione fallita: {e}", "latency": 0}
+        return {"ok": False, "error": f"Connection failed: {e}", "latency": 0}
     except Exception as e:
         return {"ok": False, "error": str(e), "latency": 0}
 
@@ -481,12 +480,12 @@ def run_query(question, control_url, timeout):
 def run_tests(args):
     import requests as req
 
-    print(f"Verifica connettività verso {args.control_url}...")
+    print(f"Checking connectivity to {args.control_url}...")
     try:
         req.get(args.control_url.replace("/invoke", ""), timeout=5)
         print("  OK\n")
     except Exception:
-        print("  [WARN] Il control-unit potrebbe non essere raggiungibile.\n")
+        print("  [WARN] The control-unit may be unreachable.\n")
 
     _SKIP_COLS = {"mocklasttaskresponse"}
 
@@ -507,7 +506,7 @@ def run_tests(args):
                     "csv_category": (row[cat_key].strip() if cat_key and row.get(cat_key) else None),
                 })
 
-    print(f"Caricate {len(rows)} query da '{args.csv_file}'")
+    print(f"Loaded {len(rows)} queries from '{args.csv_file}'")
 
     if args.only_categories:
         rows = [
@@ -515,21 +514,21 @@ def run_tests(args):
             if any(c in infer_category(parse_oracle(r["oracle"]), r["question"])
                    for c in args.only_categories)
         ]
-        print(f"Filtrate a {len(rows)} query per categorie inferite: {args.only_categories}")
+        print(f"Filtered to {len(rows)} queries by inferred categories: {args.only_categories}")
 
     if getattr(args, "only_csv_categories", None):
         rows = [
             r for r in rows
             if r.get("csv_category") and any(c in r["csv_category"] for c in args.only_csv_categories)
         ]
-        print(f"Filtrate a {len(rows)} query per csv_category: {args.only_csv_categories}")
+        print(f"Filtered to {len(rows)} queries by csv_category: {args.only_csv_categories}")
 
     if getattr(args, "only_noise", None):
         rows = [
             r for r in rows
             if r.get("noise_type") and any(n in r["noise_type"] for n in args.only_noise)
         ]
-        print(f"Filtrate a {len(rows)} query per noise type: {args.only_noise}")
+        print(f"Filtered to {len(rows)} queries by noise type: {args.only_noise}")
 
     results        = []
     all_latencies  = []
@@ -541,9 +540,9 @@ def run_tests(args):
 
     total = len(rows)
     print(f"\n{'='*72}")
-    print(f"Avvio — {total} query — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Starting — {total} queries — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"Oracle: 4 layer (L1 plan · L2 execution · L3 chaining · L4 schema)")
-    print(f"v4.1: url_resolved su L3; metrica di consistenza rimossa")
+    print(f"v4.1: url_resolved on L3; consistency metric removed")
     print(f"{'='*72}\n")
 
     noise_stats = defaultdict(lambda: {
@@ -564,7 +563,7 @@ def run_tests(args):
         oop_flag    = " 🔍OOP" if is_oop else ""
         print(f"[{idx:>3}/{total}] {category:<22} {csv_label:<18}{oop_flag} {question[:50]}")
 
-        # Singola esecuzione per query (multi-run rimosso).
+        # Single execution per query (multi-run removed).
         run_records = []
 
         for run_i in range(1):
@@ -572,16 +571,16 @@ def run_tests(args):
             all_latencies.append(outcome["latency"])
 
             if not outcome["ok"]:
-                print(f"         run {run_i+1}: ❌ RETE: {outcome['error']}")
+                print(f"         run {run_i+1}: ❌ NETWORK: {outcome['error']}")
                 run_records.append({"network_error": outcome["error"], "latency": outcome["latency"]})
                 continue
 
             data = outcome["data"]
 
-            # Per le query out-of-plan, la risposta del control-unit contiene
-            # un campo 'error' INTENZIONALMENTE (es. "Query out of domain..."):
-            # non va trattato come app_error. Filtriamo il branch sottostante
-            # solo per query non-OOP.
+            # For out-of-plan queries, the control-unit response contains
+            # an 'error' field INTENTIONALLY (e.g. "Query out of domain..."):
+            # it must not be treated as app_error. We filter the branch below
+            # only for non-OOP queries.
             if not is_oop and "error" in data and "execution_plan" not in data:
                 print(f"         run {run_i+1}: ❌ APP:  {data['error']}")
                 run_records.append({"app_error": data["error"], "latency": outcome["latency"]})
@@ -590,7 +589,7 @@ def run_tests(args):
             plan  = data.get("execution_plan", {}) or {}
             tasks = plan.get("tasks", []) if isinstance(plan, dict) else []
 
-            # BRANCH v4: query OOP → check_out_of_plan, altrimenti evaluate_all_layers
+            # BRANCH v4: OOP query → check_out_of_plan, otherwise evaluate_all_layers
             if is_oop:
                 expected = OUT_OF_PLAN_MAPPING[csv_cat_norm]
                 ev       = check_out_of_plan(data, expected)
@@ -612,8 +611,8 @@ def run_tests(args):
                 f"F1={l1['f1']:.2f} ⏱{outcome['latency']:.1f}s"
             )
 
-            # Dettagli per ciascun layer (funziona sia per evaluate_all_layers sia
-            # per check_out_of_plan perche' entrambi usano le stesse chiavi).
+            # Details for each layer (works both for evaluate_all_layers and
+            # for check_out_of_plan because both use the same keys).
             for mm in l1.get("mismatches", []):
                 print(f"              L1 extra:   {mm['task'][0]} {mm['task'][1]}")
             matched_idxs = {
@@ -668,7 +667,7 @@ def run_tests(args):
         })
 
         if args.fail_fast and agg_final in ("ERROR", "INCORRECT"):
-            print("\n[FAIL FAST] Interruzione.")
+            print("\n[FAIL FAST] Interrupted.")
             break
 
     return {
@@ -691,7 +690,7 @@ def print_summary(data):
     ran            = data["ran"]
 
     if not results:
-        print("Nessun risultato.")
+        print("No results.")
         return
 
     first_runs = [
@@ -713,15 +712,15 @@ def print_summary(data):
     max_lat    = max(latencies)               if latencies else 0
 
     print(f"\n{'='*72}")
-    print("RIEPILOGO FINALE")
+    print("FINAL SUMMARY")
     print(f"{'='*72}")
-    print(f"Query eseguite: {ran}")
+    print(f"Queries executed: {ran}")
     print(f"  ✅ CORRECT:   {status_counter.get('CORRECT',0):>4}  ({status_counter.get('CORRECT',0)/ran*100:.1f}%)")
     print(f"  🟡 PARTIAL:   {status_counter.get('PARTIAL',0):>4}  ({status_counter.get('PARTIAL',0)/ran*100:.1f}%)")
     print(f"  ❌ INCORRECT: {status_counter.get('INCORRECT',0):>4}  ({status_counter.get('INCORRECT',0)/ran*100:.1f}%)")
     print(f"  ⚠️  ERROR:     {status_counter.get('ERROR',0):>4}  ({status_counter.get('ERROR',0)/ran*100:.1f}%)")
 
-    # Breakdown dedicato per query out-of-plan
+    # Dedicated breakdown for out-of-plan queries
     oop_results = [r for r in results if r.get("is_oop")]
     if oop_results:
         print(f"\nOut-of-plan breakdown ({len(oop_results)} query):")
@@ -735,14 +734,14 @@ def print_summary(data):
             icon = "🟢" if acc >= 80 else ("🟡" if acc >= 50 else "🔴")
             print(f"  {cat:<18} {s['correct']}/{s['total']}  {acc:>5.1f}% {icon}")
 
-    print(f"\nMetriche endpoint L1 (micro):")
+    print(f"\nL1 endpoint metrics (micro):")
     print(f"  TP={all_tp}  FP={all_fp}  FN={all_fn}")
     print(f"  Micro F1={micro_f1:.3f}   Macro F1={macro_f1:.3f}")
 
-    print(f"\nLatenza: Media={avg_lat:.1f}s  Mediana={median_lat:.1f}s  Max={max_lat:.1f}s")
+    print(f"\nLatency: Mean={avg_lat:.1f}s  Median={median_lat:.1f}s  Max={max_lat:.1f}s")
 
-    print(f"\nPer categoria:")
-    hdr = f"  {'Categoria':<24}{'Tot':>4}{'OK':>5}{'Part':>6}{'Wrong':>7}{'Err':>5}  {'Acc%':>6}"
+    print(f"\nBy category:")
+    hdr = f"  {'Category':<24}{'Tot':>4}{'OK':>5}{'Part':>6}{'Wrong':>7}{'Err':>5}  {'Acc%':>6}"
     print(hdr)
     print(f"  {'-'*60}")
     for cat in sorted(category_stats):
@@ -773,14 +772,14 @@ def print_summary(data):
                 l4_fails += 1
 
     if total_valid_runs > 0:
-        print(f"\nFailure per layer (su {total_valid_runs} query valutate):")
+        print(f"\nFailure by layer (over {total_valid_runs} evaluated queries):")
         print(f"  L2 Execution: {l2_fails:>4}  ({l2_fails/total_valid_runs:.1%})")
         print(f"  L3 Chaining:  {l3_fails:>4}  ({l3_fails/total_valid_runs:.1%})")
         print(f"  L4 Schema:    {l4_fails:>4}  ({l4_fails/total_valid_runs:.1%})")
 
     noise_stats = data.get("noise_stats", {})
     if noise_stats:
-        print(f"\nRobustezza per tipo di rumore:")
+        print(f"\nRobustness by noise type:")
         hdr2 = f"  {'Noise type':<26}{'Tot':>4}{'OK':>5}{'Part':>6}{'Wrong':>7}{'Err':>5}  {'Acc%':>6}"
         print(hdr2)
         print(f"  {'-'*58}")
@@ -802,8 +801,8 @@ def print_summary(data):
         if total_noise > 0:
             rob      = total_ok / total_noise * 100
             rob_icon = "🟢" if rob >= 80 else ("🟡" if rob >= 50 else "🔴")
-            print(f"\n  Resilienza complessiva: {rob:.1f}% {rob_icon}  "
-                  f"({total_ok}/{total_noise} query rumorose corrette)")
+            print(f"\n  Overall resilience: {rob:.1f}% {rob_icon}  "
+                  f"({total_ok}/{total_noise} noisy queries correct)")
 
 
 def write_reports(data, output_dir):
@@ -821,7 +820,7 @@ def write_reports(data, output_dir):
             f.write(f"Q: {r['question']}\n")
             f.write(f"Oracle: {r['oracle']}\n")
             noise_label = f"  Noise: {r['noise_type']}" if r.get("noise_type") else ""
-            f.write(f"Esito: {r['agg_final']}{noise_label}\n")
+            f.write(f"Outcome: {r['agg_final']}{noise_label}\n")
             for run in r.get("run_records", []):
                 f.write(f"\n  Run {run.get('run','?')}:\n")
                 if "network_error" in run:
@@ -859,10 +858,10 @@ def write_reports(data, output_dir):
     with open(plans, 'w', encoding='utf-8') as f:
         json.dump(plan_log, f, indent=2, ensure_ascii=False)
 
-    print(f"\nReport scritti:")
-    print(f"  Dettaglio:  {detail}")
-    print(f"  Sommario:   {summary}")
-    print(f"  Piani JSON: {plans}")
+    print(f"\nReports written:")
+    print(f"  Detail:     {detail}")
+    print(f"  Summary:    {summary}")
+    print(f"  JSON plans: {plans}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -870,21 +869,21 @@ def write_reports(data, output_dir):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def parse_args():
-    p = argparse.ArgumentParser(description="Test runner v4.1 per LADARAG-Extended")
+    p = argparse.ArgumentParser(description="Test runner v4.1 for LADARAG-Extended")
     p.add_argument("--control-url",        default=DEFAULTS["control_url"])
     p.add_argument("--csv",                default=DEFAULTS["csv_file"], dest="csv_file")
     p.add_argument("--output-dir",         default=DEFAULTS["output_dir"])
     p.add_argument("--timeout",            default=DEFAULTS["timeout"], type=int)
     p.add_argument("--delay",              default=DEFAULTS["delay"], type=float)
     p.add_argument("--only-categories",    nargs="+", default=None, metavar="CAT",
-                   help="Filtra per categoria inferita dal oracle "
-                        "(es: single-get cross-service three-step out-of-plan)")
+                   help="Filter by category inferred from the oracle "
+                        "(e.g. single-get cross-service three-step out-of-plan)")
     p.add_argument("--only-csv-categories", nargs="+", default=None, metavar="CSV_CAT",
-                   help="Filtra per colonna Category del CSV "
-                        "(es: single-goal two-service three-service "
+                   help="Filter by the CSV Category column "
+                        "(e.g. single-goal two-service three-service "
                         "out-of-domain ambiguous invalid)")
     p.add_argument("--only-noise",         nargs="+", default=None, metavar="NOISE",
-                   help="Esegui solo query con i tipi di rumore specificati")
+                   help="Run only queries with the specified noise types")
     p.add_argument("--fail-fast",          action="store_true")
     p.add_argument("--no-report",          action="store_true")
     return p.parse_args()

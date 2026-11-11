@@ -17,17 +17,17 @@ class ConversationalAgent(Resource):
     def post(self):
         data = request.get_json(force=True)
         user_input = data["input"]
-        # max_rank (opzionale): scoping del catalogo per il test di robustezza.
-        # Viene propagato fino alla /index/search del gateway.
+        # max_rank (optional): scopes the catalog for the robustness test.
+        # It is propagated down to the gateway's /index/search.
         max_rank = data.get("max_rank")
-        # dry_run (opzionale): planning + validazione senza esecuzione. Usato
-        # dall'harness di valutazione del Designer.
+        # dry_run (optional): planning + validation without execution. Used
+        # by the Designer evaluation harness.
         dry_run = bool(data.get("dry_run", False))
-        print(f"Input ricevuto: {user_input}")
+        print(f"Received input: {user_input}")
 
         orchestrator = Orchestrator()
         results = orchestrator.control(user_input, max_rank=max_rank, dry_run=dry_run)
-        # control() puo' restituire una flask Response (caso download file)
+        # control() may return a flask Response (file download case)
         if isinstance(results, Response):
             return results
         return jsonify(results)

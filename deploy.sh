@@ -26,7 +26,7 @@ for api_file in "$APIS_DIR"/*.yaml; do
     --keycloakClientId=foo --keycloakClientSecret=bar
   echo "| Imported $api_filename."
 
-  # ── Fetch service_id con polling ─────────────────────────────────────────
+  # ── Fetch service_id with polling ────────────────────────────────────────
   MAX_RETRIES=15
   RETRY_COUNT=0
   service_id=""
@@ -76,16 +76,16 @@ for api_file in "$APIS_DIR"/*.yaml; do
     fi
   fi
 
-  # ── Patch dei dispatcher per operazione ──────────────────────────────────
-  # Il get-script (<servizio>-get.groovy) e' il dispatcher della GET di
-  # COLLEZIONE: instrada per query param (status, zoneId, type, ...) e in
-  # fallback ritorna un esempio specifico della lista (es. 'example_list').
-  # Va applicato SOLO alla GET di collezione. Applicarlo anche a
-  # POST/PUT/DELETE/GET-by-id (come faceva prima) fa si' che il fallback
-  # restituisca un nome di esempio inesistente su quelle operazioni
-  # (es. 'example_list' su una POST) -> HTTP 400 "response ... does not exist".
-  # Tutte le altre operazioni ricevono un dispatcher statico 'return mock'
-  # (l'esempio 'mock' e' presente su ogni risposta dopo fix_yaml.py).
+  # ── Per-operation dispatcher patching ────────────────────────────────────
+  # The get-script (<service>-get.groovy) is the COLLECTION GET dispatcher:
+  # it routes by query param (status, zoneId, type, ...) and, as a fallback,
+  # returns a specific example from the list (e.g. 'example_list').
+  # It must be applied ONLY to the collection GET. Applying it also to
+  # POST/PUT/DELETE/GET-by-id (as it used to) makes the fallback
+  # return an example name that does not exist on those operations
+  # (e.g. 'example_list' on a POST) -> HTTP 400 "response ... does not exist".
+  # All other operations get a static 'return mock' dispatcher
+  # (the 'mock' example is present on every response after fix_yaml.py).
   MOCK_PAYLOAD=$(/tmp/jq -n \
     --arg dispatcher "SCRIPT" \
     --arg dispatcherRules "return 'mock'" \

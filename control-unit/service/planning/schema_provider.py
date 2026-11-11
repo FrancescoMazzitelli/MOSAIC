@@ -1,13 +1,13 @@
-"""Provider di schemi usati dal planner per il guided decoding LLM.
+"""Provider of the schemas used by the planner for LLM guided decoding.
 
-Il provider fornisce:
-- lo schema di output per la generazione del piano (`output_schema()`),
-- lo schema dinamico del campo `input` basato sui request_schemas scoperti
-  nel registry (`input_schema()`).
+The provider supplies:
+- the output schema for plan generation (`output_schema()`),
+- the dynamic schema of the `input` field based on the request_schemas discovered
+  in the registry (`input_schema()`).
 
-Lo schema di output può essere sovrascritto da file JSON esterno tramite
-la variabile d'ambiente `PLANNER_OUTPUT_SCHEMA_PATH`. In assenza di override,
-viene usato uno schema di default definito internamente.
+The output schema can be overridden by an external JSON file via
+the `PLANNER_OUTPUT_SCHEMA_PATH` environment variable. When no override is set,
+a default schema defined internally is used.
 """
 
 import json
@@ -20,24 +20,24 @@ _DEFAULT_SCHEMA = (Path(__file__).resolve().parents[2]
 
 
 class SchemaProvider:
-    """Fornisce gli schemi usati dal planner per formattare l'output.
+    """Provides the schemas used by the planner to format the output.
 
-    `output_schema()` restituisce lo schema di formato JSON che guida la
-    generazione del piano da parte dell'LLM.
+    `output_schema()` returns the JSON format schema that guides the
+    plan generation by the LLM.
 
-    `input_schema()` costruisce uno schema data-driven per il campo `input`
-    aggregando tutti i request_schemas disponibili nel registry.
+    `input_schema()` builds a data-driven schema for the `input` field
+    by aggregating all the request_schemas available in the registry.
     """
 
     def __init__(self):
         self.output_schema_path = os.environ.get("PLANNER_OUTPUT_SCHEMA_PATH")
 
     def output_schema(self) -> dict:
-        """Restituisce lo schema JSON di output usato dal planner.
+        """Returns the JSON output schema used by the planner.
 
-        Se la variabile d'ambiente `PLANNER_OUTPUT_SCHEMA_PATH` punta a un file
-        JSON valido, viene usato quello. Altrimenti viene restituito lo schema
-        di default definito internamente.
+        If the `PLANNER_OUTPUT_SCHEMA_PATH` environment variable points to a valid
+        JSON file, that one is used. Otherwise the default schema
+        defined internally is returned.
         """
         path = self.output_schema_path or (_DEFAULT_SCHEMA if _DEFAULT_SCHEMA.exists() else None)
         if path and Path(path).exists():
@@ -45,11 +45,11 @@ class SchemaProvider:
         return self._default_output_schema()
 
     def _default_output_schema(self) -> dict:
-        """Schema di default per l'output del planner.
+        """Default schema for the planner output.
 
-        Questo schema descrive un oggetto con:
-        - `reasoning`: ragionamento del planner,
-        - `tasks`: lista di task con nome, servizio, URL, operazione e input.
+        This schema describes an object with:
+        - `reasoning`: the planner's reasoning,
+        - `tasks`: list of tasks with name, service, URL, operation and input.
         """
         return {
             "type": "object",
@@ -76,27 +76,27 @@ class SchemaProvider:
             "additionalProperties": False,
         }
 
-    # --- input_schema: spostato 1:1 da Controller._build_input_format_schema ---
+    # --- input_schema: moved 1:1 from Controller._build_input_format_schema ---
     def input_schema(self, discovered_request_schemas: list) -> dict:
-        """Costruisce lo schema JSON per il campo `input` dei task.
+        """Builds the JSON schema for the `input` field of the tasks.
 
-        Aggrega tutti i campi validi dai request_schemas scoperti nel registry e
-        produce uno schema con `additionalProperties: false`.
+        Aggregates all valid fields from the request_schemas discovered in the registry and
+        produces a schema with `additionalProperties: false`.
 
-        Questo schema viene iniettato nel `format` di Ollama per il guided
-        decoding: in questo modo l'LLM non può generare chiavi non previste dai
-        servizi registrati.
+        This schema is injected into Ollama's `format` for guided
+        decoding: this way the LLM cannot generate keys not provided by the
+        registered services.
 
         Args:
-            discovered_request_schemas (list): lista di dizionari `endpoint -> schema`
-                scoperti nel registry.
+            discovered_request_schemas (list): list of `endpoint -> schema` dictionaries
+                discovered in the registry.
 
         Returns:
-            dict: schema JSON valido per il campo `input`.
+            dict: valid JSON schema for the `input` field.
         """
         field_pattern = re.compile(r'(\w+):([\w]+)(?:\([^)]*\))?\*?')
 
-        # Mappa tipo compatto → schema JSON con string come alternativa per JMESPath
+        # Map compact type → JSON schema with string as alternative for JMESPath
         type_map = {
             "arr":   {"type": ["array",   "string"]},
             "str":   {"type": "string"},
@@ -123,17 +123,17 @@ class SchemaProvider:
                         all_properties[field_name] = type_map.get(field_type, {})
 
         if not all_properties:
-            # Nessun request_schema nel registry → fallback permissivo
-            print("[INPUT SCHEMA] Nessun request_schema trovato, uso fallback permissivo.")
+            # No request_schema in the registry → permissive fallback
+            print("[INPUT SCHEMA] No request_schema found, using permissive fallback.")
             return {"type": ["string", "object", "null"]}
 
-        # Aggiunge sql_query come chiave globale per i task SQL
-        # Senza questa, il guided decoding blocca la stringa SQL (tipo object ≠ string)
+        # Add sql_query as a global key for SQL tasks
+        # Without this, guided decoding blocks the SQL string (type object ≠ string)
         all_properties["sql_query"] = {"type": "string"}
 
-        print(f"[INPUT SCHEMA] Chiavi ammesse per 'input': {sorted(all_properties.keys())}")
+        print(f"[INPUT SCHEMA] Allowed keys for 'input': {sorted(all_properties.keys())}")
         return {
             "type":                 "object",
             "properties":          all_properties,
-            "additionalProperties": False,   # ← blocco matematico delle allucinazioni
+            "additionalProperties": False,   # ← hard block on hallucinations
         }

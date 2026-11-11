@@ -42,7 +42,7 @@ def openApiUrl  = "http://${MICROCKS_HOST}:${MICROCKS_INTERNAL_PORT}/api/resourc
 def yamlContent = new URL(openApiUrl).text
 
 def loaderOptions = new LoaderOptions()
-loaderOptions.setMaxAliasesForCollections(200)   // alza limite alias (default ~50)
+loaderOptions.setMaxAliasesForCollections(200)   // raise alias limit (default ~50)
 
 def yaml       = new Yaml(new SafeConstructor(loaderOptions))
 def swaggerMap = yaml.load(yamlContent)
@@ -167,7 +167,7 @@ try {
 }
 
 if (responseMap.status == "success") {
-    return "ok"  // Restituisce il nome dell'esempio di successo nel YAML
+    return "ok"  // Returns the name of the success example in the YAML
 } else {
-    return "fail" // Restituisce il nome dell'esempio di errore nel YAML
+    return "fail" // Returns the name of the failure example in the YAML
 }

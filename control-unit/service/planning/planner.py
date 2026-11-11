@@ -1,10 +1,10 @@
-"""Planner del Control Unit.
+"""Control Unit Planner.
 
-Questo modulo contiene la classe `Planner`, che trasforma una query utente
-più le informazioni sui servizi scoperti in un piano di esecuzione JSON.
+This module contains the `Planner` class, which turns a user query
+plus the information about the discovered services into a JSON execution plan.
 
-Il planner coordina prompt, schemi e LLM, quindi valida e ripara il piano.
-L'esecuzione effettiva dei task avviene in un altro componente.
+The planner coordinates prompts, schemas and the LLM, then validates and repairs the plan.
+The actual execution of the tasks happens in another component.
 """
 
 import json
@@ -19,13 +19,13 @@ from service.planning.schema_provider import SchemaProvider
 
 
 class Planner:
-    """Fase di planning: da query + servizi scoperti a piano JSON.
+    """Planning phase: from query + discovered services to a JSON plan.
 
-    `Planner` costruisce il system prompt e l'user prompt, invoca l'LLM, estrae
-    il JSON generato, valida i task e applica eventuali auto-fix.
+    `Planner` builds the system prompt and the user prompt, invokes the LLM, extracts
+    the generated JSON, validates the tasks and applies any auto-fix.
 
-    Non esegue le chiamate HTTP/SQL: si limita a produrre e controllare il
-    piano. Il fallback per piani vuoti è delegato a `Designer`.
+    It does not perform HTTP/SQL calls: it only produces and checks the
+    plan. The fallback for empty plans is delegated to `Designer`.
     """
 
     def __init__(self, model_name: str, prompts: PromptProvider = None,
@@ -38,20 +38,20 @@ class Planner:
         self.designer    = designer or Designer(fallback_model=model_name)
         self.backend_mode = "MOCK"
 
-    # -- pipeline pubblica -------------------------------------------------
+    # -- public pipeline ---------------------------------------------------
     def plan(self, query, discovered: dict, input_files=None,
              backend_mode: str = "MOCK") -> tuple[dict, float, list]:
-        """Genera un piano di esecuzione a partire dalla query e dal catalogo.
+        """Generates an execution plan from the query and the catalog.
 
         Args:
-            query (str): testo della richiesta utente.
-            discovered (dict): informazioni sui servizi, endpoint e schemi scoperti.
-            input_files (any, optional): file in input da includere nella richiesta.
-            backend_mode (str): 'MOCK' o 'REAL', usato per costruire il prompt.
+            query (str): text of the user's request.
+            discovered (dict): information about discovered services, endpoints and schemas.
+            input_files (any, optional): input files to include in the request.
+            backend_mode (str): 'MOCK' or 'REAL', used to build the prompt.
 
         Returns:
-            tuple[dict, float, list]: piano generato, latenza LLM arrotondata,
-                elenco di warning di validazione schema.
+            tuple[dict, float, list]: generated plan, rounded LLM latency,
+                list of schema validation warnings.
         """
         self.backend_mode = backend_mode
         system = self.prompts.system_prompt(backend_mode)
@@ -65,7 +65,7 @@ class Planner:
         raw_resp, latency = self.llm.complete(system, user, output_schema, input_schema)
         print(f"[LLM RESPONSE] {raw_resp}")
         print("=" * 100)
-        print(f"[LATENCY] Piano generato in {latency:.2f}s")
+        print(f"[LATENCY] Plan generated in {latency:.2f}s")
 
         plan = self.extract_agents(raw_resp)
         warnings = self._validate_plan(
@@ -74,14 +74,14 @@ class Planner:
         return plan, round(latency, 3), warnings
 
     def is_empty(self, plan: dict) -> bool:
-        """Verifica se il piano generato è vuoto (nessun task eseguibile)."""
+        """Checks whether the generated plan is empty (no executable task)."""
         return self._empty_plan_detected(plan)
 
     def diagnose_empty(self, query, plan, discovered: dict, input_files=None) -> dict:
-        """Esegue il triage di un piano vuoto tramite il Designer.
+        """Runs the triage of an empty plan through the Designer.
 
-        Il Designer valuterà se il problema è out-of-domain, ambiguo o richiede un
-        contratto di servizio alternativo.
+        The Designer will assess whether the problem is out-of-domain, ambiguous, or requires an
+        alternative service contract.
         """
         return self.designer.analyze(
             query=query,
@@ -92,20 +92,20 @@ class Planner:
         )
 
     def repair(self, plan: dict, available_ids=None, name_to_id=None) -> dict:
-        """Tenta di riparare automaticamente il piano prima dell'esecuzione.
+        """Attempts to automatically repair the plan before execution.
 
-        Corregge problemi noti come service_id errati e URL di mock mal formattati.
+        Fixes known problems such as wrong service_ids and badly formatted mock URLs.
         """
         return self._attempt_auto_fix(plan, available_ids, name_to_id)
 
-    # -- metodi spostati 1:1 dalla vecchia Controller ----------------------
+    # -- methods moved 1:1 from the old Controller -------------------------
     def extract_agents(self, agents_json: str) -> dict:
-        """Estrae il JSON valido dalla risposta testuale dell'LLM.
+        """Extracts valid JSON from the LLM's text response.
 
-        Supporta tre strategie:
-          1. parse diretto,
-          2. parse dopo un tag </think>,
-          3. ricerca grezza del primo oggetto JSON valido.
+        Supports three strategies:
+          1. direct parse,
+          2. parse after a </think> tag,
+          3. raw search for the first valid JSON object.
         """
         def try_parse(text):
             s, e = text.find('{'), text.rfind('}') + 1
@@ -116,41 +116,41 @@ class Planner:
                     pass
             return None
 
-        # Livello 1: parse diretto (sempre il caso con structured output)
+        # Level 1: direct parse (always the case with structured output)
         try:
             result = json.loads(agents_json)
             if isinstance(result, dict):
-                print("[PARSE] Diretto.")
+                print("[PARSE] Direct.")
                 return result
         except json.JSONDecodeError:
             pass
 
-        # Livello 2: dopo </think> (fallback per modelli reasoning)
+        # Level 2: after </think> (fallback for reasoning models)
         m = re.search(r'</think>', agents_json, flags=re.IGNORECASE)
         if m:
             result = try_parse(agents_json[m.end():].strip())
             if result is not None:
-                print("[PARSE] Dopo </think>.")
+                print("[PARSE] After </think>.")
                 return result
 
-        # Livello 3: ricerca grezza
+        # Level 3: raw search
         result = try_parse(agents_json)
         if result is not None:
-            print("[PARSE] Grezzo.")
+            print("[PARSE] Raw.")
             return result
 
-        print(f"[FORMAT ERROR] Nessun JSON valido. Anteprima: {agents_json[:200]}")
+        print(f"[FORMAT ERROR] No valid JSON. Preview: {agents_json[:200]}")
         return {}
 
     def _empty_plan_detected(self, plan: dict) -> bool:
         """
-        Rileva un piano senza task eseguibili. La CLASSIFICAZIONE del motivo
-        (out-of-domain, ambigua, invalida, ...) e' delegata a
-        Designer.analyze() che fa una sola chiamata LLM e decide anche se
-        progettare un contratto o meno.
+        Detects a plan with no executable tasks. The CLASSIFICATION of the reason
+        (out-of-domain, ambiguous, invalid, ...) is delegated to
+        Designer.analyze() which makes a single LLM call and also decides whether
+        to design a contract or not.
 
-        Condizione: tasks e' una lista vuota. Un plan malformato ({}) ha
-        tasks assente e non attiva il fallback.
+        Condition: tasks is an empty list. A malformed plan ({}) has
+        no tasks and does not trigger the fallback.
         """
         if not isinstance(plan, dict):
             return False
@@ -164,31 +164,31 @@ class Planner:
                        discovered_parameters: list | None = None,
                        backend_mode: str = "MOCK") -> list[str]:
         """
-        Validatore post-parse del piano generato dall'LLM.
+        Post-parse validator for the plan generated by the LLM.
 
-        Controlli effettuati per ogni task:
-          1. (POST/PUT/PATCH) Le chiavi del body 'input' devono essere documentate
-             nel request_schema dell'endpoint chiamato.
-          2. (GET) Ogni query param nell'URL deve essere nel set di parametri
-             documentati dal catalogo per quell'endpoint.
-          3. (GET, HC-12, solo in MOCK) Un URL non deve combinare due o più
-             query param in AND: i mock server (Microcks) matchano un parametro
-             alla volta contro gli esempi registrati. In REAL il check viene
-             saltato perché le API reali supportano l'AND-combination.
+        Checks performed for each task:
+          1. (POST/PUT/PATCH) The keys of the 'input' body must be documented
+             in the request_schema of the called endpoint.
+          2. (GET) Every query param in the URL must be in the set of parameters
+             documented by the catalog for that endpoint.
+          3. (GET, HC-12, MOCK only) A URL must not combine two or more
+             query params in AND: mock servers (Microcks) match one parameter
+             at a time against the registered examples. In REAL the check is
+             skipped because real APIs support AND-combination.
 
-        Ritorna una lista di warning: lista vuota significa piano pulito.
+        Returns a list of warnings: an empty list means a clean plan.
 
-        Utile per:
-          - Loggare violazioni residue che il guided decoding non ha bloccato
-          - Raccogliere dati quantitativi per la tesi (% violazioni pre/post patch)
-          - Estendere in futuro con auto-retry selettivo sul singolo task violato
+        Useful for:
+          - Logging residual violations that guided decoding did not block
+          - Collecting quantitative data for the thesis (% violations pre/post patch)
+          - Extending in the future with selective auto-retry on the single violated task
         """
         warnings: list[str] = []
         field_pattern = re.compile(r'(\w+):')
 
-        # Costruisce due mappe  path_endpoint → set_nomi_validi:
-        #   endpoint_valid_keys   → chiavi del body (POST/PUT)
-        #   endpoint_valid_params → nomi dei query param (GET)
+        # Build two maps  path_endpoint → set_of_valid_names:
+        #   endpoint_valid_keys   → body keys (POST/PUT)
+        #   endpoint_valid_params → query param names (GET)
         endpoint_valid_keys:   dict[str, set] = {}
         endpoint_valid_params: dict[str, set] = {}
 
@@ -216,7 +216,7 @@ class Planner:
             input_val = task.get("input")
             operation = str(task.get("operation") or "GET").upper()
 
-            # ── Check 1: chiavi del body (POST/PUT/PATCH) ────────────────────
+            # ── Check 1: body keys (POST/PUT/PATCH) ──────────────────────────
             if isinstance(input_val, dict) and input_val:
                 matched_valid_keys = None
                 for ep_path, valid_keys in endpoint_valid_keys.items():
@@ -229,11 +229,11 @@ class Planner:
                     if hallucinated:
                         warnings.append(
                             f"[SCHEMA VIOLATION] Task '{task_name}' → "
-                            f"chiavi non valide: {sorted(hallucinated)} | "
-                            f"chiavi ammesse: {sorted(matched_valid_keys)}"
+                            f"invalid keys: {sorted(hallucinated)} | "
+                            f"allowed keys: {sorted(matched_valid_keys)}"
                         )
 
-            # ── Check 2 & 3: query param dei GET (HC-12) ─────────────────────
+            # ── Check 2 & 3: GET query params (HC-12) ────────────────────────
             if operation == "GET" and url:
                 try:
                     parsed = urlparse(url)
@@ -243,28 +243,28 @@ class Planner:
 
                 param_names = set(qs.keys())
 
-                # Matching endpoint sul path (stessa euristica del check 1)
+                # Match endpoint on the path (same heuristic as check 1)
                 matched_valid_params = None
                 for ep_path, valid_names in endpoint_valid_params.items():
                     if ep_path in parsed.path:
                         matched_valid_params = valid_names
                         break
 
-                # Check 2: param non documentati nel catalogo
-                if matched_valid_params:   # non-None e non vuoto
+                # Check 2: params not documented in the catalog
+                if matched_valid_params:   # non-None and non-empty
                     hallucinated_params = param_names - matched_valid_params
                     if hallucinated_params:
                         warnings.append(
                             f"[PARAM VIOLATION] Task '{task_name}' → "
-                            f"query param non documentati: {sorted(hallucinated_params)} | "
-                            f"documentati: {sorted(matched_valid_params)}"
+                            f"query params not documented: {sorted(hallucinated_params)} | "
+                            f"documented: {sorted(matched_valid_params)}"
                         )
 
-                # Check 3: HC-12 — AND-combination (solo in MOCK)
+                # Check 3: HC-12 — AND combination (MOCK only)
                 if backend_mode == "MOCK" and len(param_names) >= 2:
                     warnings.append(
                         f"[HC-12 VIOLATION] Task '{task_name}' → "
-                        f"GET combina {len(param_names)} query param in AND: "
+                        f"GET combines {len(param_names)} query params with AND: "
                         f"{sorted(param_names)} | "
                         f"url: {url[:120]}"
                     )
@@ -279,7 +279,7 @@ class Planner:
             if not isinstance(task, dict):
                 continue
 
-            # ── Corregge service_id: modello ha usato name invece di _id ──
+            # ── Fix service_id: model used name instead of _id ───────────
             sid = task.get("service_id", "")
             if sid and sid not in id_set and name_to_id and sid in name_to_id:
                 corrected = name_to_id[sid]
@@ -287,11 +287,11 @@ class Planner:
                 task["service_id"] = corrected
 
             url = str(task.get("url", ""))
-            # I cablaggi mock (rewrite localhost e prepend mock_url) si applicano
-            # solo in MOCK. In REAL un URL non-http o con localhost è un bug di
-            # pianificazione: verrà scartato dalla successiva validazione.
+            # Mock wiring (localhost rewrite and mock_url prepend) applies
+            # only in MOCK. In REAL a non-http or localhost URL is a planning
+            # bug: it will be discarded by the subsequent validation.
             if self.backend_mode == "MOCK":
-                # 1. Sostituisce localhost con l'indirizzo del mock server
+                # 1. Replace localhost with the mock server address
                 if url and re.search(r'http://localhost:\d+', url):
                     fixed = re.sub(r'http://localhost:\d+', mock_url, url)
                     print(f"[AUTO-FIX] localhost → mock-server: {fixed}")
@@ -299,15 +299,15 @@ class Planner:
                     url = fixed
 
                 # 2. Strip angle brackets  <https://...>  →  https://...
-                #    Artefatto di formattazione Markdown del modello (non un
-                #    errore di planning): il modello sa qual è l'URL ma lo
-                #    ha wrappato con i simboli < > del link Markdown.
+                #    Model's Markdown formatting artifact (not a
+                #    planning error): the model knows the URL but
+                #    wrapped it with the Markdown link < > symbols.
                 if url.startswith('<') and url.endswith('>'):
                     url = url[1:-1]
                     task["url"] = url
                     print(f"[AUTO-FIX] Stripped angle brackets: {url}")
 
-                # 3. URL senza schema → prepend mock_url
+                # 3. URL without scheme → prepend mock_url
                 if url and not url.startswith("http") and not url.startswith("{{"):
                     task["url"] = (mock_url if url.startswith("/") else mock_url + "/") + url.lstrip("/")
                     print(f"[AUTO-FIX] URL: {task['url']}")
@@ -317,6 +317,6 @@ class Planner:
             if all(f in task for f in ("task_name", "service_id", "url", "operation")):
                 fixed_tasks.append(task)
             else:
-                print(f"[AUTO-FIX] Task scartato: {task.get('task_name', 'unnamed')}")
+                print(f"[AUTO-FIX] Task discarded: {task.get('task_name', 'unnamed')}")
         plan["tasks"] = fixed_tasks
         return plan

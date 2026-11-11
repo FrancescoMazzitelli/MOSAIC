@@ -3,54 +3,54 @@
 robustness_test.py
 ==================
 
-Test di ROBUSTEZZA della discovery sotto rumore crescente, in UN solo runner.
+ROBUSTNESS test of discovery under increasing noise, in a SINGLE runner.
 
-A ogni gradino di distrattori (50, 100, 150, 200) misura DUE livelli:
+At each distractor step (50, 100, 150, 200) it measures TWO levels:
 
-  • RETRIEVAL (gateway)   - POST /index/search. Misura la coverage degli
-      endpoint corretti e l'intrusione dei distrattori nel ranking.
-      Cattura anche i casi in cui il servizio corretto è recuperato ma l'endpoint
-      giusto potrebbe essere stato potato dal reranker / token budget.
-  • END-TO-END (control)  - POST /api/control/invoke: l'LLM seleziona
-        l'endpoint giusto nel piano? (selection_accuracy, micro-F1, final_correct).
-        Riusa il Layer-1 di test_validation/testRunner.py.
+  • RETRIEVAL (gateway)   - POST /index/search. Measures the coverage of the
+      correct endpoints and the intrusion of distractors into the ranking.
+      It also captures the cases where the correct service is retrieved but the
+      right endpoint may have been pruned by the reranker / token budget.
+  • END-TO-END (control)  - POST /api/control/invoke: does the LLM select
+        the right endpoint in the plan? (selection_accuracy, micro-F1, final_correct).
+        Reuses Layer-1 from test_validation/testRunner.py.
 
-DUE MODALITÀ DI SCOPING (SCOPE_MODE):
-  • import  (default) - i distrattori vengono importati a gradini (offset).
-                        Richiede catalogo iniziale PULITO.
-  • filter            - i 200 distrattori sono GIÀ in catalogo e taggati con
-                        sample_rank (vedi backfill_ranks); il livello diventa il
-                        parametro max_rank passato a gateway/control-unit. Niente
-                        import, niente cancellazioni, ri-eseguibile all'infinito.
+TWO SCOPING MODES (SCOPE_MODE):
+  • import  (default) - distractors are imported in steps (offset).
+                        Requires a CLEAN initial catalog.
+  • filter            - the 200 distractors are ALREADY in the catalog and tagged with
+                        sample_rank (see backfill_ranks); the level becomes the
+                        max_rank parameter passed to gateway/control-unit. No
+                        import, no deletions, re-runnable indefinitely.
 
-USO
----
+USAGE
+-----
     python robustness_test.py
     (PowerShell:  $env:SCOPE_MODE="filter"; $env:PHASES="retrieval"; python robustness_test.py)
 
-PREREQUISITI
-------------
-# 1. import : stack PULITO (solo mock smart-city). 
+PREREQUISITES
+-------------
+# 1. import : CLEAN stack (mock smart-city only).
 
-# 2. reindex: mette i distrattori in services_index → la fase RETRIEVAL li vede
+# 2. reindex: puts the distractors into services_index → the RETRIEVAL phase sees them
 Invoke-RestMethod -Method Post http://localhost:5000/index/reindex
 
-# 3. backfill: scrive sample_rank in Mongo + Qdrant → abilita il filtro max_rank
+# 3. backfill: writes sample_rank to Mongo + Qdrant → enables the max_rank filter
 Invoke-RestMethod -Method Post http://localhost:7500/api/importer/backfill_ranks
 
-# 4. register_existing: rimette i distrattori in Consul+Redis → la fase END-TO-END li vede
+# 4. register_existing: puts the distractors back into Consul+Redis → the END-TO-END phase sees them
 Invoke-RestMethod -Method Post http://localhost:7500/api/importer/register_existing
 
-Variabili d'ambiente (default tra parentesi):
-    SCOPE_MODE      (import)   import | filter --> filter se i distrattori sono già in catalogo
+Environment variables (default in parentheses):
+    SCOPE_MODE      (import)   import | filter --> filter if the distractors are already in the catalog
     PHASES          (retrieval,control)
     GATEWAY_URL     (http://localhost:5000)
     CONTROL_URL     (http://localhost:5500/api/control/invoke)
     IMPORTER_URL    (http://localhost:7500)
     REQUESTS_CSV    (test_validation/smart_city_test_requests.csv)
     MIN_DISTRACTORS (=STEP)   MAX_DISTRACTORS (200)   STEP (50)   SEED (42)
-    MAX_QUERIES     (0 = tutte)   TIMEOUT (180)   GATEWAY_TIMEOUT (600)   DELAY (0.3)
-    OUT_CSV         (auto: risultati_test/robustness_<fasi>_<tipo>_<scope>_<data>.csv)
+    MAX_QUERIES     (0 = all)   TIMEOUT (180)   GATEWAY_TIMEOUT (600)   DELAY (0.3)
+    OUT_CSV         (auto: risultati_test/robustness_<phases>_<type>_<scope>_<date>.csv)
 """
 
 import csv
@@ -68,17 +68,17 @@ PHASES          = {p.strip().lower() for p in os.environ.get("PHASES", "retrieva
 GATEWAY_URL     = os.environ.get("GATEWAY_URL",  "http://localhost:5000")
 CONTROL_URL     = os.environ.get("CONTROL_URL",  "http://localhost:5500/api/control/invoke")
 IMPORTER_URL    = os.environ.get("IMPORTER_URL", "http://localhost:7500")
-REQUESTS_CSV    = os.environ.get("REQUESTS_CSV", os.path.join(HERE, "test_validation", "smart_city_test_requests.csv"))
+REQUESTS_CSV    = os.environ.get("REQUESTS_CSV", os.path.join(HERE, "smart_city_test_requests.csv"))
 MAX_DISTRACTORS = int(os.environ.get("MAX_DISTRACTORS", "200"))
 STEP            = int(os.environ.get("STEP", "50"))
 MIN_DISTRACTORS = int(os.environ.get("MIN_DISTRACTORS", str(STEP)))
 SEED            = int(os.environ.get("SEED", "42"))
-MAX_QUERIES     = int(os.environ.get("MAX_QUERIES", "0"))     # 0 = tutte
-# Filtro sul tipo di query: "all" (default) | "cross" (solo cross-service:
-# oracolo che tocca >1 servizio) | "single" (un solo servizio).
+MAX_QUERIES     = int(os.environ.get("MAX_QUERIES", "0"))     # 0 = all
+# Filter on the query type: "all" (default) | "cross" (cross-service only:
+# oracle touching >1 service) | "single" (a single service).
 QUERY_FILTER    = os.environ.get("QUERY_FILTER", "all").strip().lower()
-# Su query cross-service le metriche "primarie" svc/ep_recall (legate al primo
-# servizio della catena) sono parziali: in quel caso le omettiamo e teniamo solo
+# On cross-service queries the "primary" metrics svc/ep_recall (tied to the first
+# service of the chain) are partial: in that case we omit them and keep only
 # coverage + intrusion + end-to-end.
 CROSS_ONLY      = (QUERY_FILTER == "cross")
 TIMEOUT         = int(os.environ.get("TIMEOUT", "1200"))        # control-unit (LLM)
@@ -87,8 +87,8 @@ DELAY           = float(os.environ.get("DELAY", "0.3"))
 
 
 def _default_out_csv():
-    """Nome CSV auto: robustness_<fasi>_<tipo>_<scope>_<YYYYMMDD>.csv.
-    Così run di date o tipi diversi non si sovrascrivono. Override con OUT_CSV."""
+    """Auto CSV name: robustness_<phases>_<type>_<scope>_<YYYYMMDD>.csv.
+    So runs from different dates or types do not overwrite each other. Override with OUT_CSV."""
     date  = time.strftime("%Y%m%d")
     parts = ["robustness", "-".join(sorted(PHASES)) if PHASES else "none"]
     if QUERY_FILTER != "all":
@@ -105,13 +105,13 @@ OUT_CSV         = os.environ.get("OUT_CSV") or _default_out_csv()
 
 
 # ---------------------------------------------------------------------------
-# Riuso del valutatore canonico (testRunner.py) - solo se serve la fase control
+# Reuse of the canonical evaluator (testRunner.py) - only if the control phase is needed
 # ---------------------------------------------------------------------------
 
 def _load_testrunner():
-    path = os.path.join(HERE, "test_validation", "testRunner.py")
+    path = os.path.join(HERE, "testRunner.py")
     if not os.path.isfile(path):
-        sys.exit(f"[ERRORE] testRunner.py non trovato in {path} (richiesto dalla fase 'control')")
+        sys.exit(f"[ERROR] testRunner.py not found at {path} (required by the 'control' phase)")
     spec = importlib.util.spec_from_file_location("testRunner", path)
     mod  = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -121,7 +121,7 @@ TR = _load_testrunner() if "control" in PHASES else None
 
 
 # ---------------------------------------------------------------------------
-# Helpers comuni
+# Common helpers
 # ---------------------------------------------------------------------------
 
 def _norm_op(raw):
@@ -129,7 +129,7 @@ def _norm_op(raw):
 
 
 def _op_parts(op):
-    """ 'GET /bin/1' -> ('GET', '/bin/1'). Vale per oracolo e per capability. """
+    """ 'GET /bin/1' -> ('GET', '/bin/1'). Valid for both oracle and capability. """
     parts = op.split(None, 1)
     if len(parts) != 2:
         return (op.upper(), "")
@@ -148,15 +148,15 @@ def _path_seg(path):
 
 
 def _is_cross_service(steps):
-    """Cross-service = l'oracolo tocca più di un servizio (segmento-risorsa
-    distinto). Es. [GET /vehicle, GET /sensor] → cross; [GET /bin, DELETE /bin/1]
-    → single (stesso servizio)."""
+    """Cross-service = the oracle touches more than one service (distinct
+    resource segment). E.g. [GET /vehicle, GET /sensor] → cross; [GET /bin, DELETE /bin/1]
+    → single (same service)."""
     segs = {_path_seg(p) for _, p in steps if p}
     return len(segs) > 1
 
 
 def _path_match(cap_path, ora_path):
-    """Match path tollerante ai placeholder su ENTRAMBI i lati:
+    """Path match tolerant to placeholders on BOTH sides:
        '/bin/{id}' vs '/bin/1' -> True ; '/bin' vs '/bin/1' -> False."""
     cs  = [s for s in cap_path.strip('/').split('/') if s]
     osg = [s for s in ora_path.strip('/').split('/') if s]
@@ -179,9 +179,9 @@ def _caps_match_op(caps_keys, o_method, o_path):
 
 
 def _op_present_anywhere(services, caps_getter, o_method, o_path):
-    """True se almeno UN servizio discovered espone l'operazione (cross-service).
-    Usato per la coverage multi-step, dove gli step possono stare su servizi
-    diversi e quindi non si possono cercare solo nel servizio atteso."""
+    """True if at least ONE discovered service exposes the operation (cross-service).
+    Used for multi-step coverage, where the steps may live on different
+    services and therefore cannot be looked up only in the expected service."""
     for svc in services:
         if _caps_match_op(caps_getter(svc), o_method, o_path):
             return True
@@ -219,8 +219,8 @@ def load_queries(path):
             first = _norm_op(oracle_raw.replace("\\n", "\n").splitlines()[0]) if oracle_raw.strip() else ""
             rows.append({"query": q, "oracle_steps": steps, "seg": _resource_seg(first)})
 
-    # Filtro per tipo di query (cross-service / single) PRIMA del cap MAX_QUERIES,
-    # così "30 query cross-service" = 30 effettive di quel tipo.
+    # Filter by query type (cross-service / single) BEFORE the MAX_QUERIES cap,
+    # so "30 cross-service queries" = 30 actual queries of that type.
     if QUERY_FILTER == "cross":
         rows = [r for r in rows if _is_cross_service(r["oracle_steps"])]
     elif QUERY_FILTER == "single":
@@ -232,19 +232,19 @@ def load_queries(path):
 
 
 def import_distractors(limit, offset=0):
-    """Importa SOLO la fetta nuova [offset:limit]. Usato solo in SCOPE_MODE=import."""
+    """Import ONLY the new slice [offset:limit]. Used only in SCOPE_MODE=import."""
     if limit <= offset:
         return
-    print(f"[IMPORT] importazione distrattori [{offset}:{limit}] (seed={SEED})...")
+    print(f"[IMPORT] importing distractors [{offset}:{limit}] (seed={SEED})...")
     t0 = time.time()
     r = requests.post(f"{IMPORTER_URL}/api/importer/import",
                       json={"limit": limit, "seed": SEED, "offset": offset}, timeout=3600)
     r.raise_for_status()
-    print(f"[IMPORT] completato in {time.time()-t0:.0f}s -> {r.json()}")
+    print(f"[IMPORT] completed in {time.time()-t0:.0f}s -> {r.json()}")
 
 
 # ---------------------------------------------------------------------------
-# FASE RETRIEVAL (gateway)
+# RETRIEVAL PHASE (gateway)
 # ---------------------------------------------------------------------------
 
 def fetch_catalog_services():
@@ -254,13 +254,13 @@ def fetch_catalog_services():
 
 
 def build_expected_map(queries):
-    """resource_seg -> service_id, considerando SOLO i mock smart-city
-    (servizi senza sample_rank). Così i distrattori non rubano un segmento."""
+    """resource_seg -> service_id, considering ONLY the smart-city mocks
+    (services without sample_rank). This way the distractors do not steal a segment."""
     services = fetch_catalog_services()
     seg_to_id = {}
     for s in services:
         if s.get("sample_rank") is not None:
-            continue  # distrattore apis.guru → escluso dalla mappa attesi
+            continue  # apis.guru distractor → excluded from the expected map
         sid = s.get("_id")
         for op in (s.get("capabilities", {}) or {}).keys():
             seg = _resource_seg(_norm_op(op))
@@ -274,13 +274,13 @@ def build_expected_map(queries):
         elif seg:
             missing.add(seg)
     if missing:
-        print(f"[WARN] Segmenti senza servizio smart-city: {sorted(missing)}")
+        print(f"[WARN] Segments without a smart-city service: {sorted(missing)}")
     return expected
 
 
 def build_smartcity_ids():
-    """Set degli _id dei servizi smart-city (senza sample_rank). Tutto il resto
-    in catalogo è un distrattore apis.guru. Serve a misurare l'intrusione."""
+    """Set of the _id values of the smart-city services (without sample_rank). Everything else
+    in the catalog is an apis.guru distractor. Used to measure intrusion."""
     return {s.get("_id") for s in fetch_catalog_services() if s.get("sample_rank") is None}
 
 
@@ -294,7 +294,7 @@ def gateway_search(query, max_rank=None):
 
 
 def _caps_dict_getter(svc):
-    """Capability keys da un risultato gateway (capabilities = dict)."""
+    """Capability keys from a gateway result (capabilities = dict)."""
     return list((svc.get("capabilities", {}) or {}).keys())
 
 
@@ -313,23 +313,23 @@ def run_retrieval(queries, expected, smartcity_ids, max_rank=None):
             results = gateway_search(row["query"], max_rank=max_rank)
         except requests.exceptions.RequestException as e:
             errors += 1
-            print(f"    [WARN] query fallita ({type(e).__name__}): {row['query'][:50]}")
+            print(f"    [WARN] query failed ({type(e).__name__}): {row['query'][:50]}")
             continue
 
         ids = [s.get("_id") for s in results]
 
-        # Trova il servizio ATTESO nei risultati e la sua posizione
+        # Find the EXPECTED service in the results and its position
         srank = next((i for i, svc in enumerate(results, 1) if svc.get("_id") == exp_id), None)
 
-        # ── Intrusione distrattori: quanti distrattori stanno SOPRA l'atteso ──
+        # ── Distractor intrusion: how many distractors rank ABOVE the expected one ──
         cut = (srank - 1) if srank else len(ids)
         n_intruders = sum(1 for rid in ids[:cut] if rid not in smartcity_ids)
         intruders.append(n_intruders)
         if n_intruders > 0:
             intruded += 1
 
-        # COVERAGE cross-service: ogni step dell'oracolo presente in QUALSIASI
-        # servizio restituito (gli step possono stare su servizi diversi).
+        # Cross-service COVERAGE: each oracle step present in ANY
+        # returned service (the steps may live on different services).
         if all(_op_present_anywhere(results, _caps_dict_getter, m, p) for m, p in steps):
             coverage_ok += 1
 
@@ -342,7 +342,7 @@ def run_retrieval(queries, expected, smartcity_ids, max_rank=None):
 
 
 # ---------------------------------------------------------------------------
-# FASE END-TO-END (control-unit)
+# END-TO-END PHASE (control-unit)
 # ---------------------------------------------------------------------------
 
 def invoke_control_unit(query, max_rank=None):
@@ -355,7 +355,7 @@ def invoke_control_unit(query, max_rank=None):
 
 
 def _caps_list_getter(svc):
-    """Capability keys da un item 'discovered' (capabilities = lista)."""
+    """Capability keys from a 'discovered' item (capabilities = list)."""
     return svc.get("capabilities", []) or []
 
 
@@ -364,11 +364,11 @@ def run_control(queries, expected, smartcity_ids, max_rank=None):
     l1_pass = l1_partial = l1_fail = final_correct = errors = 0
     tp = fp = fn = 0
     latencies = []
-    # Metriche di retrieval ricavate da 'discovered' (ciò che l'LLM ha visto,
-    # post-filtro registry). Indipendenti dalla fase retrieval standalone.
-    # NB: niente coverage qui - end-to-end è fuorviante perché l'LLM può
-    # completare endpoint di un servizio che vede ma le cui operazioni erano
-    # state potate dalla lista capability. Le metriche affidabili sono L1.
+    # Retrieval metrics derived from 'discovered' (what the LLM saw,
+    # post registry filter). Independent of the standalone retrieval phase.
+    # NB: no coverage here - end-to-end is misleading because the LLM may
+    # complete endpoints of a service it sees but whose operations were
+    # pruned from the capability list. The reliable metrics are L1.
     c_ret_n = c_intruded = 0
     c_intruders = []
 
@@ -376,7 +376,7 @@ def run_control(queries, expected, smartcity_ids, max_rank=None):
         try:
             data, latency = invoke_control_unit(row["query"], max_rank=max_rank)
         except requests.exceptions.RequestException as e:
-            print(f"   [{i}/{n}] ERRORE rete: {e}")
+            print(f"   [{i}/{n}] NETWORK ERROR: {e}")
             errors += 1
             continue
         latencies.append(latency)
@@ -391,7 +391,7 @@ def run_control(queries, expected, smartcity_ids, max_rank=None):
         if ev["final"] == "CORRECT":
             final_correct += 1
 
-        # ── Retrieval visto dall'LLM (campo 'discovered' della risposta) ──
+        # ── Retrieval seen by the LLM ('discovered' field of the response) ──
         steps  = row["oracle_steps"]
         exp_id = expected.get(row["seg"])
         if steps and exp_id:
@@ -400,7 +400,7 @@ def run_control(queries, expected, smartcity_ids, max_rank=None):
             d_ids = [s.get("_id") for s in discovered]
             srank = next((j for j, rid in enumerate(d_ids, 1) if rid == exp_id), None)
 
-            # Intrusione: distrattori sopra l'atteso (o tutti, se assente)
+            # Intrusion: distractors above the expected one (or all, if absent)
             cut = (srank - 1) if srank else len(d_ids)
             n_intr = sum(1 for rid in d_ids[:cut] if rid not in smartcity_ids)
             c_intruders.append(n_intr)
@@ -425,7 +425,7 @@ def run_control(queries, expected, smartcity_ids, max_rank=None):
         "ctrl_micro_f1":           round(micro_f1, 4),
         "ctrl_final_correct_rate": round(final_correct/evaluated, 4) if evaluated else 0.0,
         "ctrl_mean_latency_s":     round(sum(latencies)/len(latencies), 2) if latencies else "",
-        # Retrieval visto dall'LLM (da 'discovered', post-filtro registry)
+        # Retrieval seen by the LLM (from 'discovered', post registry filter)
         "cret_queries":            c_ret_n,
         "cret_intrusion_rate":     round(c_intruded/c_ret_n, 4) if c_ret_n else 0.0,
     }
@@ -449,36 +449,36 @@ def write_results(results):
 
 def main():
     if SCOPE_MODE not in ("import", "filter"):
-        sys.exit(f"[ERRORE] SCOPE_MODE non valido: '{SCOPE_MODE}' (atteso 'import' o 'filter')")
+        sys.exit(f"[ERROR] invalid SCOPE_MODE: '{SCOPE_MODE}' (expected 'import' or 'filter')")
 
-    print(f"Modalità     : {SCOPE_MODE}")
-    print(f"Fasi         : {sorted(PHASES)}")
+    print(f"Mode         : {SCOPE_MODE}")
+    print(f"Phases       : {sorted(PHASES)}")
     print(f"Gateway      : {GATEWAY_URL}")
     print(f"Control-unit : {CONTROL_URL}")
     print(f"Importer     : {IMPORTER_URL}")
     print(f"CSV          : {REQUESTS_CSV}")
-    print(f"Gradini      : {MIN_DISTRACTORS} -> {MAX_DISTRACTORS} step {STEP} | seed={SEED}")
+    print(f"Steps        : {MIN_DISTRACTORS} -> {MAX_DISTRACTORS} step {STEP} | seed={SEED}")
     if SCOPE_MODE == "filter":
-        print("               (no import: usa max_rank sui 200 già taggati con backfill_ranks)")
+        print("               (no import: uses max_rank on the 200 already tagged by backfill_ranks)")
     if QUERY_FILTER != "all":
-        print(f"Filtro query : {QUERY_FILTER}")
+        print(f"Query filter : {QUERY_FILTER}")
     if MAX_QUERIES:
-        print(f"Sottoinsieme : prime {MAX_QUERIES} (dopo il filtro)")
+        print(f"Subset       : first {MAX_QUERIES} (after filtering)")
     print()
 
     queries = load_queries(REQUESTS_CSV)
-    print(f"[INIT] {len(queries)} query caricate"
-          + (f" (filtro={QUERY_FILTER})" if QUERY_FILTER != "all" else "") + ".")
+    print(f"[INIT] {len(queries)} queries loaded"
+          + (f" (filter={QUERY_FILTER})" if QUERY_FILTER != "all" else "") + ".")
     if QUERY_FILTER == "cross" and len(queries) < MAX_QUERIES:
-        print(f"[WARN] solo {len(queries)} query cross-service disponibili "
-              f"(richieste {MAX_QUERIES}). Valuta un CSV con più cross-service.")
+        print(f"[WARN] only {len(queries)} cross-service queries available "
+              f"(requested {MAX_QUERIES}). Consider a CSV with more cross-service queries.")
 
-    # La mappa attesi serve a entrambe le fasi (retrieval diretto e
-    # retrieval-da-control), quindi la costruiamo sempre.
+    # The expected map is used by both phases (direct retrieval and
+    # retrieval-from-control), so we always build it.
     expected = build_expected_map(queries)
     smartcity_ids = build_smartcity_ids()
-    print(f"[INIT] {len(expected)} servizi attesi mappati ; "
-          f"{len(smartcity_ids)} servizi smart-city (il resto = distrattori).")
+    print(f"[INIT] {len(expected)} expected services mapped ; "
+          f"{len(smartcity_ids)} smart-city services (the rest = distractors).")
     print()
 
     levels = list(range(MIN_DISTRACTORS, MAX_DISTRACTORS + 1, STEP))
@@ -488,7 +488,7 @@ def main():
     results = []
     prev = 0
     for level in levels:
-        # In modalità import si caricano i distrattori; in filter si usa max_rank.
+        # In import mode the distractors are loaded; in filter mode max_rank is used.
         scope = None
         if SCOPE_MODE == "import":
             if level > prev:
@@ -497,30 +497,30 @@ def main():
         else:  # filter
             scope = level
 
-        print(f"\n=== Livello distrattori: {level} ===")
+        print(f"\n=== Distractor level: {level} ===")
         row = {"distractors": level}
 
         if "retrieval" in PHASES:
             print("  [RETRIEVAL]")
             row.update(run_retrieval(queries, expected, smartcity_ids, max_rank=scope))
             print(f"    coverage={row['ep_coverage_rate']}  |  "
-                  f"intrusione distrattori: {row['intrusion_rate']}")
+                  f"distractor intrusion: {row['intrusion_rate']}")
 
         if "control" in PHASES:
             print("  [CONTROL-UNIT]")
             row.update(run_control(queries, expected, smartcity_ids, max_rank=scope))
-            print(f"    RETRIEVAL(LLM) intrusione distrattori={row['cret_intrusion_rate']}")
+            print(f"    RETRIEVAL(LLM) distractor intrusion={row['cret_intrusion_rate']}")
             print(f"    selection_accuracy={row['ctrl_selection_accuracy']} "
                   f"micro_f1={row['ctrl_micro_f1']} "
                   f"final_correct_rate={row['ctrl_final_correct_rate']} "
-                  f"(errori={row['ctrl_errors']})")
+                  f"(errors={row['ctrl_errors']})")
 
         results.append(row)
         write_results(results)
-        print(f"    [SAVE] {OUT_CSV} aggiornato ({len(results)} livelli)")
+        print(f"    [SAVE] {OUT_CSV} updated ({len(results)} levels)")
 
-    print(f"\n✅ Risultati salvati in {OUT_CSV}")
-    print("\nRiepilogo robustezza vs numero distrattori:")
+    print(f"\n✅ Results saved to {OUT_CSV}")
+    print("\nRobustness summary vs number of distractors:")
     header = "  dist"
     if "retrieval" in PHASES:
         if not CROSS_ONLY:
@@ -531,8 +531,8 @@ def main():
             header += "  | Lep@1  Lep@5"
         header += "  | Lintr   sel_acc  micro_f1  final_ok"
     print(header)
-    print("  (ep = retrieval gateway ; cov = coverage ; intr = intrusion_rate ; "
-          "L* = retrieval visto dall'LLM ; sel/final = end-to-end)")
+    print("  (ep = gateway retrieval ; cov = coverage ; intr = intrusion_rate ; "
+          "L* = retrieval seen by the LLM ; sel/final = end-to-end)")
     for r in results:
         line = f"  {r['distractors']:>4}"
         if "retrieval" in PHASES:
@@ -547,5 +547,5 @@ if __name__ == "__main__":
     try:
         main()
     except requests.exceptions.RequestException as e:
-        print(f"[ERRORE HTTP] {e}", file=sys.stderr)
+        print(f"[HTTP ERROR] {e}", file=sys.stderr)
         sys.exit(1)

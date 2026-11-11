@@ -5,46 +5,46 @@ from jmespath import exceptions as jmespath_exc
 
 
 class PlaceholderResolver:
-    """Risoluzione del chaining JMESPath {{...}} sul contesto dei task precedenti.
-    Spostata 1:1 dalla vecchia Controller (metodi _resolve_expression e
-    resolve_placeholders): nessuna modifica alla logica."""
+    """JMESPath {{...}} chaining resolution over the context of previous tasks.
+    Moved 1:1 from the old Controller (methods _resolve_expression and
+    resolve_placeholders): no logic changes."""
 
     def _resolve_expression(self, expr: str, context: dict):
         """
-        Risolve un placeholder JMESPath sul contesto dei task precedenti.
+        Resolves a JMESPath placeholder against the context of previous tasks.
 
-        Formato:  task_name<jmespath_expression>
+        Format:  task_name<jmespath_expression>
 
-        Pattern canonici (vedi HC-11 nel system prompt — gli UNICI permessi):
+        Canonical patterns (see HC-11 in the system prompt — the ONLY allowed ones):
           get_bins[0].id                                         # single value
           get_attractions[?status=='open'] | [0].zoneId          # filter + pick
           get_sensors[*].zoneId                                  # array
           get_sensors[?alertActive==`true`].zoneId | join(',',@) # filtered join
 
-        Pattern legacy supportati per graceful degradation (ma VIETATI dal prompt —
-        se il modello li genera comunque, il codice non crasha ma è un bug):
+        Legacy patterns supported for graceful degradation (but FORBIDDEN by the prompt —
+        if the model generates them anyway, the code does not crash but it is a bug):
           get_lights | sort_by(@, &brightness)[0].id
           min_by(get_sensors, &reading)
-        Per ranking/min/max usare un task SQL terminale.
+        For ranking/min/max use a terminal SQL task.
         """
-        # Rimuove suffissi legacy
+        # Remove legacy suffixes
         expr = re.sub(r'\.(output|response|data)\b', '', expr)
-        # Normalizza .[N] → [N]: l'indicizzazione JMESPath valida è 'results[0]',
-        # NON 'results.[0]' (un punto prima della parentesi è un parse error).
-        # Rimuoviamo l'eventuale punto spurio, lasciando intatto '| [0]' (pipe).
+        # Normalize .[N] → [N]: valid JMESPath indexing is 'results[0]',
+        # NOT 'results.[0]' (a dot before the bracket is a parse error).
+        # Remove any spurious dot, leaving '| [0]' (pipe) intact.
         expr = re.sub(r'\.(\[\d+\])', r'\1', expr)
         m = re.match(r'^(\w+)(.*)', expr, re.DOTALL)
         if not m:
-            print(f"[JMESPATH] Impossibile estrarre task_name da '{expr}'")
+            print(f"[JMESPATH] Unable to extract task_name from '{expr}'")
             return ""
 
         task_name = m.group(1)
         remainder = m.group(2).strip()
 
-        # ── Funzioni JMESPath usate come prefisso (min_by, max_by, sort_by, ecc.) ──
-        # La regex cattura "min_by" come task_name, ma non è un task nel context:
-        # è una funzione JMESPath. In questo caso valutiamo l'intera espressione
-        # sul context dict, dove i task_name sono chiavi risolvibili da JMESPath.
+        # ── JMESPath functions used as a prefix (min_by, max_by, sort_by, etc.) ──
+        # The regex captures "min_by" as task_name, but it is not a task in the context:
+        # it is a JMESPath function. In this case we evaluate the whole expression
+        # on the context dict, where task_names are keys resolvable by JMESPath.
         JMESPATH_FUNCTIONS = {"min_by", "max_by", "sort_by", "length", "keys",
                               "values", "contains", "starts_with", "ends_with",
                               "reverse", "to_array", "to_string", "to_number", "type"}
@@ -52,29 +52,29 @@ class PlaceholderResolver:
             try:
                 result = jmespath.search(expr, context)
                 if result is None or result == [] or result == "":
-                    print(f"[JMESPATH] Funzione '{task_name}' — nessun risultato per '{expr}'")
+                    print(f"[JMESPATH] Function '{task_name}' — no result for '{expr}'")
                     return ""
                 return result
             except jmespath_exc.JMESPathError as e:
-                print(f"[JMESPATH ERROR] funzione '{task_name}': {e}")
+                print(f"[JMESPATH ERROR] function '{task_name}': {e}")
                 return ""
 
         val = context.get(task_name)
         if val is None:
-            print(f"[JMESPATH] Task '{task_name}' non trovato nel contesto")
+            print(f"[JMESPATH] Task '{task_name}' not found in the context")
             return ""
 
         if not remainder:
             return val
 
-        # ── Pipe iniziale (es. task | sort_by(@, &field)[0].id) ──────────────────
-        # La regex estrae "task" come task_name e "| sort_by(...)" come remainder.
-        # Il pipe è un operatore binario: non può iniziare un'espressione JMESPath.
-        # Fix: strippa il | iniziale — val è già il left-hand side del pipe.
+        # ── Leading pipe (e.g. task | sort_by(@, &field)[0].id) ─────────────────
+        # The regex extracts "task" as task_name and "| sort_by(...)" as remainder.
+        # The pipe is a binary operator: it cannot start a JMESPath expression.
+        # Fix: strip the leading | — val is already the left-hand side of the pipe.
         if remainder.startswith('|'):
             remainder = remainder[1:].strip()
 
-        # Rimuove il punto iniziale se presente (JMESPath non lo accetta)
+        # Remove the leading dot if present (JMESPath does not accept it)
         jmespath_expr = remainder[1:] if remainder.startswith('.') else remainder
 
         if not jmespath_expr:
@@ -83,11 +83,11 @@ class PlaceholderResolver:
         try:
             result = jmespath.search(jmespath_expr, val)
 
-            # ── Autofix: filtro [?] applicato al dict root invece che all'array ────
-            # Causa tipica: LLM scrive task[?k=='v'] | [0].f ma la risposta è
-            # {"items": [{k,v}, ...]} — il filtro va su .items, non sul root.
-            # Se result è None e l'expr inizia con [?, si tenta con i wrapper key
-            # più comuni, ma solo se effettivamente presenti nel dict di risposta.
+            # ── Autofix: [?] filter applied to the root dict instead of the array ────
+            # Typical cause: the LLM writes task[?k=='v'] | [0].f but the response is
+            # {"items": [{k,v}, ...]} — the filter must go on .items, not on the root.
+            # If result is None and the expr starts with [?, try the most common
+            # wrapper keys, but only if actually present in the response dict.
             if result is None and jmespath_expr.lstrip().startswith('[?') and isinstance(val, dict):
                 _WRAPPERS = ('items', 'results', 'data', 'tracks', 'albums',
                              'artists', 'playlists', 'devices', 'queued_tracks')
@@ -97,46 +97,46 @@ class PlaceholderResolver:
                     _candidate = jmespath.search(f'{_w}{jmespath_expr}', val)
                     if _candidate is not None and _candidate != [] and _candidate != "":
                         print(
-                            f"[JMESPATH AUTOFIX] '{task_name}{remainder}': filtro applicato "
-                            f"su '.{_w}' (wrapper auto-rilevato). "
-                            f"Scrivi '{task_name}.{_w}{jmespath_expr}' per essere esplicito."
+                            f"[JMESPATH AUTOFIX] '{task_name}{remainder}': filter applied "
+                            f"to '.{_w}' (auto-detected wrapper). "
+                            f"Write '{task_name}.{_w}{jmespath_expr}' to be explicit."
                         )
                         result = _candidate
                         break
 
             if result is None:
-                print(f"[JMESPATH] Nessun match per '{jmespath_expr}' su '{task_name}'")
+                print(f"[JMESPATH] No match for '{jmespath_expr}' on '{task_name}'")
                 return ""
-            # Lista vuota dopo filtro → il param risultante sarà vuoto
-            # (es: zoneIds= ) che causa 400 su Microcks — logga warning esplicito
+            # Empty list after filtering → the resulting param will be empty
+            # (e.g. zoneIds= ), which causes a 400 on Microcks — log an explicit warning
             if isinstance(result, list) and len(result) == 0:
                 print(f"[JMESPATH WARN] Empty list for '{jmespath_expr}' on '{task_name}' — resulting URL param will be empty")
                 return ""
-            # Deduplicazione: liste di stringhe (es. zoneIds per join)
+            # Deduplication: lists of strings (e.g. zoneIds for join)
             if isinstance(result, list) and all(isinstance(x, str) for x in result):
                 seen = set()
                 result = [x for x in result if not (x in seen or seen.add(x))]
             return result
         except jmespath_exc.JMESPathError as e:
             print(f"[JMESPATH ERROR] expr='{expr}' jmespath='{jmespath_expr}': {e}")
-            # NON restituire il parent (dict/list): verrebbe serializzato con
-            # json.dumps dentro l'URL, producendo un 404 silenzioso. Falliamo
-            # in modo visibile restituendo stringa vuota.
+            # Do NOT return the parent (dict/list): it would be serialized with
+            # json.dumps inside the URL, producing a silent 404. Fail
+            # visibly by returning an empty string.
             return ""
 
     def resolve_placeholders(self, data, context: dict):
         """
-        Risolve tutti i placeholder {{...}} in una struttura dati.
-        Supporta stringhe, dizionari e liste ricorsivamente.
+        Resolves all {{...}} placeholders in a data structure.
+        Supports strings, dictionaries and lists recursively.
         """
         if isinstance(data, str):
-            # ── Normalizza concatenazione malformata generata dall'LLM ──────────
-            # Pattern errato: {{A},{{B}}  (manca un } prima della virgola)
-            # Pattern atteso: {{A}},{{B}} (due placeholder distinti)
-            # Causa: il modello chiude il primo con } invece di }} per concatenare.
-            # Fix scoped: cerca solo la sequenza "},{{" che NON sia già preceduta da "}"
-            # (cioè non già corretta come "}},{{"), evitando false sostituzioni su
-            # caratteri "},{" legittimi fuori dai placeholder.
+            # ── Normalize malformed concatenation generated by the LLM ──────────
+            # Wrong pattern: {{A},{{B}}  (missing a } before the comma)
+            # Expected pattern: {{A}},{{B}} (two distinct placeholders)
+            # Cause: the model closes the first with } instead of }} to concatenate.
+            # Scoped fix: look only for the sequence "},{{" that is NOT already preceded by "}"
+            # (i.e. not already corrected as "}},{{"), avoiding false replacements on
+            # legitimate "},{" characters outside placeholders.
             fixed = re.sub(r'(?<!\})\},(\{\{)', r'}},\1', data)
             if fixed != data:
                 print(f"[PLACEHOLDER FIX] Malformed concatenation normalized in: {data[:80]}")
@@ -146,11 +146,11 @@ class PlaceholderResolver:
             if not matches:
                 return data
 
-            # Caso 1: l'intera stringa è esattamente un placeholder → preserva il tipo
+            # Case 1: the whole string is exactly one placeholder → preserve the type
             if len(matches) == 1 and data.strip() == f"{{{{{matches[0]}}}}}":
                 return self._resolve_expression(matches[0].strip(), context)
 
-            # Caso 2: placeholder inline in URL o stringa → converte tutto a stringa
+            # Case 2: inline placeholder in URL or string → convert everything to string
             for match in matches:
                 val = self._resolve_expression(match.strip(), context)
                 if isinstance(val, (dict, list)):

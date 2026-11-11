@@ -54,12 +54,12 @@ QDRANT_COLLECTION       = os.environ.get("QDRANT_COLLECTION", "services")
 QDRANT_COLLECTION_INDEX = os.environ.get("QDRANT_COLLECTION_INDEX", "services_index")
 QDRANT_URI              = f"http://{QDRANT_HOST}:{QDRANT_PORT}"
 
-# ── LLM query decomposition (opzionale) ──────────────────────────────────────
-# Se USE_LLM_DECOMPOSITION=true, prima dello Stage 1 la query viene decomposta
-# in sotto-query atomiche tramite un LLM (default glm-4.7-flash via Ollama).
-# Ogni sotto-query produce un proprio set top-K; l'unione deduplicata è il
-# nuovo input dello Stage 2. In caso di errore si fa fallback alla query
-# originale come singola sotto-query — il sistema non si rompe mai.
+# ── LLM query decomposition (optional) ──────────────────────────────────────
+# If USE_LLM_DECOMPOSITION=true, before Stage 1 the query is decomposed
+# into atomic sub-queries through an LLM (default glm-4.7-flash via Ollama).
+# Each sub-query produces its own top-K set; the deduplicated union is the
+# new input to Stage 2. On error it falls back to the original query
+# as a single sub-query — the system never breaks.
 USE_LLM_DECOMPOSITION  = os.environ.get("USE_LLM_DECOMPOSITION", "true").lower() == "true"
 OLLAMA_URL             = os.environ.get("OLLAMA_URL", "http://ollama:11434")
 DECOMPOSITION_MODEL    = os.environ.get("DECOMPOSITION_MODEL", "glm-4.7-flash:q4_K_M")
@@ -80,17 +80,17 @@ tokenizer       = None
 
 class ONNXCrossEncoder:
     """
-    Wrapper personalizzato per eseguire un CrossEncoder in formato ONNX.
-    Ottimizza massivamente l'inferenza CPU rispetto a PyTorch standard.
+    Custom wrapper to run a CrossEncoder in ONNX format.
+    Massively optimizes CPU inference compared to standard PyTorch.
     """
     def __init__(self, model_name):
         logger.info(f"Converting and loading {model_name} in ONNX format (this may take a minute)...")
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-        # ── Parallelismo CPU configurabile (per accelerare il reranking nei test) ──
-        # RERANK_THREADS=0 (default) lascia decidere a ONNX Runtime (di solito tutti
-        # i core). Impostandolo (es. al numero di core fisici) si controlla quante
-        # thread usa l'inferenza. Non cambia i risultati, solo la velocità.
+        # ── Configurable CPU parallelism (to speed up reranking in tests) ──
+        # RERANK_THREADS=0 (default) lets ONNX Runtime decide (usually all
+        # cores). Setting it (e.g. to the number of physical cores) controls how
+        # many threads inference uses. It does not change results, only speed.
         rerank_threads = int(os.environ.get("RERANK_THREADS", "0"))
         self.batch_size = int(os.environ.get("RERANK_BATCH_SIZE", "4"))
 
@@ -106,7 +106,7 @@ class ONNXCrossEncoder:
             logger.info(f"ONNX reranker: intra_op={rerank_threads} threads, "
                         f"batch_size={self.batch_size}")
 
-        # Il parametro export=True scarica il modello PyTorch e lo converte in ONNX al volo
+        # The export=True parameter downloads the PyTorch model and converts it to ONNX on the fly
         self.model = _ORT.from_pretrained(model_name, **kwargs)
         logger.info(f"{model_name} successfully loaded in ONNX.")
 
@@ -116,17 +116,17 @@ class ONNXCrossEncoder:
         all_scores = []
         for i in range(0, len(sentences), batch_size):
             batch = sentences[i:i+batch_size]
-            # max_length=512 previene crash su endpoint con descrizioni anomale
+            # max_length=512 prevents crashes on endpoints with anomalous descriptions
             inputs = self.tokenizer(batch, padding=True, truncation=True, max_length=512, return_tensors="pt")
             
-            # Inferenza tramite runtime ONNX (C++)
+            # Inference through the ONNX runtime (C++)
             outputs = self.model(**inputs)
             logits = outputs.logits
             if logits.ndim > 1:
                 logits = logits.squeeze(-1)
             logits = logits.detach().numpy()
             
-            # Gestione dei risultati (singoli o multipli)
+            # Handling of results (single or multiple)
             if logits.ndim == 0:
                 all_scores.append(float(logits))
             else:
@@ -139,7 +139,7 @@ def load_model():
     global embedding_model, reranker_model, tokenizer
     logger.info("Loading models...")
     
-    # 1. Caricamento Embedding Model (Lasciato in PyTorch standard)
+    # 1. Load Embedding Model (kept in standard PyTorch)
     embedding_model = SentenceTransformer(
         model_name_or_path='Qwen/Qwen3-Embedding-0.6B',
         device='cpu',
@@ -148,16 +148,16 @@ def load_model():
     tokenizer = embedding_model.tokenizer
     logger.info("Embedding model loaded.")
     
-    # 2. Caricamento Reranker Model (Usando il nuovo motore ONNX)
+    # 2. Load Reranker Model (using the new ONNX engine)
     reranker_model = ONNXCrossEncoder('BAAI/bge-reranker-base')
     logger.info("Reranker model loaded.")
 
 
 def embed_query(text: str) -> list:
     """
-    Embedding per la query utente a runtime.
-    Prefisso 'query:' — Qwen3-Embedding è addestrato con asimmetria query/passage:
-    usare lo stesso prefisso per query e documenti degrada il retrieval.
+    Embedding for the user query at runtime.
+    Prefix 'query:' — Qwen3-Embedding is trained with query/passage asymmetry:
+    using the same prefix for queries and documents degrades retrieval.
     """
     embedding = embedding_model.encode(
         f"query: {text}", convert_to_tensor=False, normalize_embeddings=True
@@ -167,9 +167,9 @@ def embed_query(text: str) -> list:
 
 def embed_passage(text: str) -> list:
     """
-    Embedding per documenti da indicizzare (capabilities, descriptions).
-    Prefisso 'passage:' — corrisponde al ruolo dei documenti nel training
-    di Qwen3-Embedding. Da usare in tutte le fasi di indexing.
+    Embedding for documents to index (capabilities, descriptions).
+    Prefix 'passage:' — matches the role of documents in Qwen3-Embedding
+    training. To be used in all indexing phases.
     """
     embedding = embedding_model.encode(
         f"passage: {text}", convert_to_tensor=False, normalize_embeddings=True
@@ -184,11 +184,11 @@ def count_tokens(text):
 
 def select_stage1_text(doc: dict) -> tuple[str, str]:
     """
-    Seleziona il testo per l'indice Stage 1 con la seguente priorità:
-      1) description + generated_description concatenate (se entrambe presenti)
-      2) description da sola (se lunga almeno 100 caratteri)
-      3) generated_description da sola (fallback)
-      4) description corta da sola (ultimo fallback)
+    Selects the text for the Stage 1 index with the following priority:
+      1) description + generated_description concatenated (if both present)
+      2) description alone (if at least 100 characters long)
+      3) generated_description alone (fallback)
+      4) short description alone (last fallback)
     """
     description = (doc.get("description") or "").strip()
     generated   = (doc.get("generated_description") or "").strip()
@@ -207,15 +207,15 @@ def select_stage1_text(doc: dict) -> tuple[str, str]:
 # ─────────────────────────────────────────────────────────────────────────────
 # ENRICHED RERANK TEXT
 #
-# Il CrossEncoder ha scarso overlap lessicale tra query utente e capability text
-# perché le capability descrivono comportamenti REST, non concetti del dominio.
-# Arricchire il testo con i parametri e i campi del response schema espone
-# termini di dominio (es. "temperature", "Celsius", "sensorType") che il
-# CrossEncoder può confrontare direttamente con la query.
+# The CrossEncoder has poor lexical overlap between the user query and the capability text
+# because capabilities describe REST behaviors, not domain concepts.
+# Enriching the text with parameters and response schema fields exposes
+# domain terms (e.g. "temperature", "Celsius", "sensorType") that the
+# CrossEncoder can compare directly with the query.
 #
-# Il testo arricchito è usato SOLO per il reranking — non viene salvato in
-# Qdrant né inviato all'LLM. Il contesto LLM riceve sempre la capability
-# originale (più leggibile e concisa).
+# The enriched text is used ONLY for reranking — it is not stored in
+# Qdrant nor sent to the LLM. The LLM context always receives the
+# original capability (more readable and concise).
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _build_enriched_text(
@@ -226,11 +226,11 @@ def _build_enriched_text(
     request_schemas: dict,
 ) -> str:
     """
-    Costruisce il testo arricchito per il reranking CrossEncoder combinando:
-      - capability text (descrizione funzionale dell'endpoint)
-      - parameters (nomi e valori enum dei query param)
-      - response schema fields (nomi dei campi restituiti)
-      - request schema fields (nomi dei campi in input, per i POST/PUT)
+    Builds the enriched text for CrossEncoder reranking by combining:
+      - capability text (functional description of the endpoint)
+      - parameters (names and enum values of query params)
+      - response schema fields (names of returned fields)
+      - request schema fields (names of input fields, for POST/PUT)
     """
     parts = [capabilities.get(http_op, "")]
 
@@ -256,17 +256,17 @@ def _build_enriched_text(
 # ─────────────────────────────────────────────────────────────────────────────
 # QUERY DECOMPOSITION (Stage 1 recall enhancer)
 #
-# Spezza una query utente composita in sotto-query atomiche, ognuna mirata
-# a un singolo tipo di informazione/servizio. Migliora il recall di Stage 1
-# su cataloghi grandi e cross-domain dove un singolo embedding della query
-# composta è un compromesso semantico che penalizza i servizi "marginali".
+# Splits a composite user query into atomic sub-queries, each targeting
+# a single type of information/service. Improves Stage 1 recall
+# on large and cross-domain catalogs where a single embedding of the
+# composite query is a semantic compromise that penalizes "marginal" services.
 #
-# La decomposizione è DOMAIN-AGNOSTIC: il prompt non contiene knowledge
-# specifica del catalogo, l'LLM ragiona sulla forma logica della query.
+# Decomposition is DOMAIN-AGNOSTIC: the prompt contains no catalog-specific
+# knowledge, the LLM reasons about the logical form of the query.
 #
-# In caso di errore (toggle off, timeout, JSON malformato, lista vuota) si
-# fa fallback alla query originale come singola sotto-query — comportamento
-# identico al pipeline pre-decomposizione, zero rischio di regressione.
+# On error (toggle off, timeout, malformed JSON, empty list) it
+# falls back to the original query as a single sub-query — behavior
+# identical to the pre-decomposition pipeline, zero risk of regression.
 # ─────────────────────────────────────────────────────────────────────────────
 
 DECOMPOSITION_SYSTEM_PROMPT = """You are a query decomposition assistant for a service discovery system.
@@ -315,13 +315,13 @@ DECOMPOSITION_SCHEMA = {
 
 def decompose_query(query_text: str) -> tuple[list, dict]:
     """
-    Decompone la query in sotto-query atomiche tramite LLM.
+    Decomposes the query into atomic sub-queries through an LLM.
 
     Returns:
-        (sub_queries, meta) dove meta contiene:
+        (sub_queries, meta) where meta contains:
           - source: "llm" | "fallback" | "disabled"
           - latency_ms: int
-          - reason: motivo del fallback (se applicabile)
+          - reason: fallback reason (if applicable)
     """
     if not USE_LLM_DECOMPOSITION:
         return [query_text], {"source": "disabled", "latency_ms": 0, "reason": None}
@@ -355,7 +355,7 @@ def decompose_query(query_text: str) -> tuple[list, dict]:
         parsed  = json.loads(content)
         sub_queries = parsed.get("sub_queries", [])
 
-        # Sanitize: strip, dedupe (case-insensitive), drop empty, cap a MAX_SUBQ
+        # Sanitize: strip, dedupe (case-insensitive), drop empty, cap to MAX_SUBQ
         seen, clean = set(), []
         for sq in sub_queries:
             sq = (sq or "").strip()
@@ -414,33 +414,33 @@ def index():
 #def vector_search():
 def vector_search_original():
     """
-    Two-stage retrieval pipeline con decomposizione opzionale e ranking RRF:
+    Two-stage retrieval pipeline with optional decomposition and RRF ranking:
 
-    Stage 0 (opzionale) — Query decomposition via LLM:
-      Se USE_LLM_DECOMPOSITION=true, la query viene spezzata in sotto-query
-      atomiche. Ogni sotto-query produce un proprio set di candidati nello
-      Stage 1; l'unione deduplicata (max-score) diventa l'input dello Stage 2.
-      La query ORIGINALE viene comunque passata al CrossEncoder per preservare
-      il contesto operativo (entità, filtri, condizioni).
+    Stage 0 (optional) — Query decomposition via LLM:
+      If USE_LLM_DECOMPOSITION=true, the query is split into atomic
+      sub-queries. Each sub-query produces its own set of candidates in
+      Stage 1; the deduplicated union (max-score) becomes the input to Stage 2.
+      The ORIGINAL query is still passed to the CrossEncoder to preserve
+      the operational context (entities, filters, conditions).
 
-    Stage 1 — Bi-encoder su descriptions (services_index):
-      Recupera i top-K servizi per similarità semantica sulla description.
+    Stage 1 — Bi-encoder on descriptions (services_index):
+      Retrieves the top-K services by semantic similarity on the description.
 
-    Stage 2 — Cross-encoder su capabilities (reranker BAAI/bge-reranker-base):
-      Per ogni servizio recuperato nel Stage 1, carica gli endpoint da MongoDB
-      e li rerankerizza con il CrossEncoder usando la query originale.
+    Stage 2 — Cross-encoder on capabilities (reranker BAAI/bge-reranker-base):
+      For each service retrieved in Stage 1, loads the endpoints from MongoDB
+      and reranks them with the CrossEncoder using the original query.
 
-    Ranking finale — Reciprocal Rank Fusion (RRF):
-      Combina i ranking di Stage 1 (s1_score) e Stage 2 (best_ep_score)
-      sommando 1/(K + rank_i) per ogni ranking. Tecnica IR standard
-      (Cormack, Clarke, Buettcher 2009) che evita la normalizzazione di
-      score su scale incompatibili (cosine similarity vs logit). Nessun
-      iperparametro empirico: K=60 è il valore canonico in letteratura.
+    Final ranking — Reciprocal Rank Fusion (RRF):
+      Combines the Stage 1 (s1_score) and Stage 2 (best_ep_score) rankings
+      by summing 1/(K + rank_i) for each ranking. Standard IR technique
+      (Cormack, Clarke, Buettcher 2009) that avoids normalizing
+      scores on incompatible scales (cosine similarity vs logit). No
+      empirical hyperparameter: K=60 is the canonical value in the literature.
 
-    Token budget con trimming graceful:
-      Invece di scartare un intero servizio quando non entra nel budget,
-      scala progressivamente il numero di endpoint mantenendo i top-N
-      per ep_score fino a trovare la configurazione minima che entra.
+    Token budget with graceful trimming:
+      Instead of discarding an entire service when it does not fit the budget,
+      progressively scales down the number of endpoints keeping the top-N
+      by ep_score until it finds the minimal configuration that fits.
     """
     data = request.get_json()
     if not data or "query" not in data:
@@ -448,17 +448,17 @@ def vector_search_original():
 
     query_text = data["query"]
 
-    # ── Scoping del catalogo per il test di robustezza (opzionale) ─────────────
-    # max_rank: include nello Stage 1 solo i servizi SENZA sample_rank (i mock
-    # smart-city, sempre presenti) PIÙ i distrattori con sample_rank < max_rank.
-    # Permette di simulare "catalogo con N distrattori" senza importarli/cancellarli
-    # fisicamente. Assente o null = nessun filtro (comportamento di produzione).
+    # ── Catalog scoping for the robustness test (optional) ─────────────
+    # max_rank: includes in Stage 1 only services WITHOUT sample_rank (the
+    # smart-city mocks, always present) PLUS distractors with sample_rank < max_rank.
+    # Allows simulating a "catalog with N distractors" without importing/deleting them
+    # physically. Absent or null = no filter (production behavior).
     max_rank = data.get("max_rank")
     service_ids = data.get("service_ids")
     stage1_filter = None
     if service_ids:
-        # Scoping stretto a un insieme di servizi (es. i 5 servizi di un
-        # dominio SOCBench-D). Filtro sul payload mongo_id di services_index.
+        # Strict scoping to a set of services (e.g. the 5 services of a
+        # SOCBench-D domain). Filter on the mongo_id payload of services_index.
         ids = [str(sid) for sid in service_ids]
         stage1_filter = Filter(must=[
             FieldCondition(key="mongo_id", match=MatchAny(any=ids)),
@@ -469,20 +469,20 @@ def vector_search_original():
             IsEmptyCondition(is_empty=PayloadField(key="sample_rank")),
             FieldCondition(key="sample_rank", range=Range(lt=int(max_rank))),
         ])
-        logger.info(f"[SCOPE] max_rank={max_rank}: distrattori con rank<{max_rank} + smart-city")
+        logger.info(f"[SCOPE] max_rank={max_rank}: distractors with rank<{max_rank} + smart-city")
 
-    # ── Parametri pipeline ────────────────────────────────────────────────────
+    # ── Pipeline parameters ────────────────────────────────────────────
     STAGE1_K                  = 7
-    # 6 = numero massimo di endpoint per servizio nel catalogo smart-city
-    # (GET list, GET/PUT/DELETE /{id}, POST, PUT /zone/...). Tenendoli tutti si
-    # evita che il reranker scarti il GET-list nelle query di lettura o
-    # l'endpoint di scrittura nelle query find-then-act, senza ricorrere a un
-    # boost euristico query-agnostico. Il token budget (5000) fa da guardia.
+    # 6 = maximum number of endpoints per service in the smart-city catalog
+    # (GET list, GET/PUT/DELETE /{id}, POST, PUT /zone/...). Keeping them all
+    # avoids the reranker discarding the GET-list in read queries or
+    # the write endpoint in find-then-act queries, without resorting to a
+    # query-agnostic heuristic boost. The token budget (5000) acts as a guard.
     TOP_ENDPOINTS_PER_SERVICE = 6
-    K_RRF                     = 60   # parametro canonico (Cormack et al., 2009)
+    K_RRF                     = 60   # canonical parameter (Cormack et al., 2009)
 
     # ════════════════════════════════════════════════════════════════════════
-    # STAGE 0: QUERY DECOMPOSITION (opzionale)
+    # STAGE 0: QUERY DECOMPOSITION (optional)
     # ════════════════════════════════════════════════════════════════════════
     logger.info(f"[QUERY] {query_text}")
     sub_queries, decomp_meta = decompose_query(query_text)
@@ -494,21 +494,21 @@ def vector_search_original():
     )
 
     # ════════════════════════════════════════════════════════════════════════
-    # STAGE 1: union dei top-K per ogni sotto-query (max-score per servizio)
+    # STAGE 1: union of the top-K for each sub-query (max-score per service)
     # ════════════════════════════════════════════════════════════════════════
     stage1_scores: dict = {}
     per_subquery_log = []
 
     for sq in sub_queries:
         sq_embedding = embed_query(sq)
-        # query_points è il successore di search() (deprecato in qdrant-client 1.10+).
-        # Restituisce un QueryResponse con .points contenente ScoredPoint identici
-        # a quelli ritornati da search(): stessi attributi .id, .score, .payload.
+        # query_points is the successor of search() (deprecated in qdrant-client 1.10+).
+        # Returns a QueryResponse with .points containing ScoredPoint identical
+        # to those returned by search(): same .id, .score, .payload attributes.
         sq_response = qdrant_client.query_points(
             collection_name=QDRANT_COLLECTION_INDEX,
             query=sq_embedding,
             limit=STAGE1_K,
-            query_filter=stage1_filter,   # None = nessun filtro (produzione)
+            query_filter=stage1_filter,   # None = no filter (production)
         )
         sq_results = sq_response.points
         ids_for_log = []
@@ -520,29 +520,29 @@ def vector_search_original():
         per_subquery_log.append(f"  '{sq}' → {ids_for_log}")
 
     if not stage1_scores:
-        logger.warning("[SEARCH] Stage 1: nessun servizio trovato in services_index")
+        logger.warning("[SEARCH] Stage 1: no service found in services_index")
         return jsonify({"results": []}), 200
 
     logger.info(
-        f"[STAGE 1] union di {len(sub_queries)} sub-query → "
-        f"{len(stage1_scores)} servizi unici:\n" +
+        f"[STAGE 1] union of {len(sub_queries)} sub-queries → "
+        f"{len(stage1_scores)} unique services:\n" +
         "\n".join(per_subquery_log) +
         f"\n  UNION: {list(stage1_scores.keys())}"
     )
 
     # ════════════════════════════════════════════════════════════════════════
-    # STAGE 2: reranking degli endpoint — single-batch per tutti i servizi
+    # STAGE 2: endpoint reranking — single-batch for all services
     #
-    # Carichiamo i servizi da MongoDB con projection (no roundtrip BSON),
-    # costruiamo tutte le coppie (query, enriched_text) in una lista unica
-    # e facciamo UNA SOLA chiamata a predict().
-    # NOTA: si usa SEMPRE la query_text originale, non le sotto-query.
+    # We load services from MongoDB with projection (no BSON roundtrip),
+    # build all (query, enriched_text) pairs in a single list
+    # and make ONE SINGLE call to predict().
+    # NOTE: the original query_text is ALWAYS used, not the sub-queries.
     # ════════════════════════════════════════════════════════════════════════
     services_data = {}
     for doc_id in stage1_scores:
-        # Projection: escludiamo _id (lo abbiamo già) e selezioniamo solo
-        # i campi necessari. Niente roundtrip dumps/loads, tutti i sotto-campi
-        # sono dict di stringhe (no ObjectId nidificati).
+        # Projection: exclude _id (we already have it) and select only
+        # the necessary fields. No dumps/loads roundtrip, all sub-fields
+        # are string dicts (no nested ObjectId).
         retrieved = collection.find_one(
             {"_id": doc_id},
             {"_id": 0, "name": 1, "description": 1, "capabilities": 1,
@@ -550,12 +550,12 @@ def vector_search_original():
              "parameters": 1}
         )
         if not retrieved:
-            logger.warning(f"[STAGE 2] Servizio '{doc_id}' non trovato in MongoDB")
+            logger.warning(f"[STAGE 2] Service '{doc_id}' not found in MongoDB")
             continue
 
         capabilities = retrieved.get("capabilities", {}) or {}
-        # Esclusi: POST /register (registrazione interna del mock) e qualsiasi
-        # endpoint /health (utile per liveness check, inutile per il planner LLM).
+        # Excluded: POST /register (mock internal registration) and any
+        # /health endpoint (useful for liveness check, useless for the LLM planner).
         ops = [op for op in capabilities.keys()
                if op != "POST /register" and not op.endswith("/health")]
         if not ops:
@@ -576,9 +576,9 @@ def vector_search_original():
     if not services_data:
         return jsonify({"results": []}), 200
 
-    # ── Costruisci tutte le coppie in una lista unica ────────────────────────
+    # ── Build all pairs in a single list ────────────────────────
     all_pairs = []
-    pair_map  = []  # (doc_id, op) per ogni elemento di all_pairs
+    pair_map  = []  # (doc_id, op) for each element of all_pairs
 
     for doc_id, sdata in services_data.items():
         for op in sdata["ops"]:
@@ -592,17 +592,17 @@ def vector_search_original():
             all_pairs.append((query_text, enriched))
             pair_map.append((doc_id, op))
 
-    logger.info(f"[STAGE 2] Single-batch reranking: {len(all_pairs)} coppie "
-                f"da {len(services_data)} servizi")
+    logger.info(f"[STAGE 2] Single-batch reranking: {len(all_pairs)} pairs "
+                f"from {len(services_data)} services")
 
-    # ── Unica chiamata a predict() per tutte le coppie (con partizionamento) ──
-    # Impostiamo batch_size=4 per forzare il CrossEncoder a calcolare piccoli blocchi,
-    # prevenendo l'esaurimento della RAM e l'utilizzo dello Swap Disk su CPU in Docker.
-    # batch_size=None → usa RERANK_BATCH_SIZE (default 4). Aumentarlo migliora
-    # l'utilizzo della CPU sui catalogi grandi, a costo di più RAM.
+    # ── Single call to predict() for all pairs (with batching) ──
+    # We set batch_size=4 to force the CrossEncoder to compute small blocks,
+    # preventing RAM exhaustion and Swap Disk usage on CPU in Docker.
+    # batch_size=None → uses RERANK_BATCH_SIZE (default 4). Increasing it improves
+    # CPU utilization on large catalogs, at the cost of more RAM.
     all_scores = reranker_model.predict(all_pairs)
 
-    # ── Aggrega gli score per doc_id ─────────────────────────────────────────
+    # ── Aggregate scores by doc_id ─────────────────────────────────────────
     scores_by_service: dict = {doc_id: {} for doc_id in services_data}
     for (doc_id, op), score in zip(pair_map, all_scores):
         scores_by_service[doc_id][op] = float(score)
@@ -611,10 +611,10 @@ def vector_search_original():
     for doc_id, sdata in services_data.items():
         ops = sdata["ops"]
 
-        # Ordinamento puro per score CrossEncoder: nessun boost euristico.
-        # Il CrossEncoder conosce la query specifica e assegna lo score corretto
-        # a ogni endpoint — sovrascriverlo con un boost query-agnostico degrada
-        # la selezione per query che non richiedono un GET list.
+        # Pure sorting by CrossEncoder score: no heuristic boost.
+        # The CrossEncoder knows the specific query and assigns the correct score
+        # to each endpoint — overriding it with a query-agnostic boost degrades
+        # selection for queries that do not require a GET list.
         scored_ops = sorted(
             [(op, scores_by_service[doc_id][op]) for op in ops],
             key=lambda x: x[1],
@@ -623,8 +623,8 @@ def vector_search_original():
 
         relevant_ops = scored_ops[:TOP_ENDPOINTS_PER_SERVICE]
 
-        # Best score semantico reale — usa max() sui grezzi, NON relevant_ops[0]
-        # che potrebbe essere drogato dal boost.
+        # Real best semantic score — uses max() on the raw scores, NOT relevant_ops[0]
+        # which could be inflated by the boost.
         best_endpoint_score = max(scores_by_service[doc_id].values())
 
         merged[doc_id] = {
@@ -644,11 +644,11 @@ def vector_search_original():
             f"{op:<40} score={score:.4f}" for op, score in relevant_ops
         )
         discarded_ops = [op for op, _ in scored_ops[TOP_ENDPOINTS_PER_SERVICE:]]
-        disc_str = f"\n          SCARTATI : {discarded_ops}" if discarded_ops else ""
+        disc_str = f"\n          DISCARDED : {discarded_ops}" if discarded_ops else ""
         logger.info(
             f"[STAGE 2] {doc_id}\n"
             f"          s1={sdata['s1_score']:.4f} | best_ep={best_endpoint_score:.4f}\n"
-            f"          SELEZIONATI ({len(relevant_ops)}/{len(ops)}):\n"
+            f"          SELECTED ({len(relevant_ops)}/{len(ops)}):\n"
             f"            {ep_rows}"
             f"{disc_str}"
         )
@@ -659,27 +659,27 @@ def vector_search_original():
     # ════════════════════════════════════════════════════════════════════════
     # RECIPROCAL RANK FUSION (RRF)
     #
-    # Combina due ranking di servizi senza necessità di normalizzare le scale:
-    #   - ranking per s1_score (cosine similarity sulla description, range 0-1)
-    #   - ranking per best_ep_score (logit del CrossEncoder, range circa ±10)
+    # Combines two service rankings without needing to normalize the scales:
+    #   - ranking by s1_score (cosine similarity on the description, range 0-1)
+    #   - ranking by best_ep_score (CrossEncoder logit, range about ±10)
     #
-    # Formula: rrf(s) = Σ 1/(K + rank_i(s))  per ogni ranking i
-    # K=60 è il valore canonico in letteratura (Cormack et al. 2009),
-    # sufficientemente grande da smussare le differenze di rank top e
-    # sufficientemente piccolo da non appiattire tutto il ranking.
+    # Formula: rrf(s) = Σ 1/(K + rank_i(s))  for each ranking i
+    # K=60 is the canonical value in the literature (Cormack et al. 2009),
+    # large enough to smooth the differences of top ranks and
+    # small enough not to flatten the whole ranking.
     #
-    # Vantaggi rispetto allo scoring composito ALPHA*s1 + BETA*sigmoid(z):
-    #   - zero iperparametri empirici da giustificare
-    #   - robusto a outlier (un best_ep_score molto alto non distrugge il ranking)
-    #   - citazione bibliografica solida per la difesa di tesi
+    # Advantages over composite scoring ALPHA*s1 + BETA*sigmoid(z):
+    #   - zero empirical hyperparameters to justify
+    #   - robust to outliers (a very high best_ep_score does not destroy the ranking)
+    #   - solid bibliographic citation for the thesis defense
     # ════════════════════════════════════════════════════════════════════════
     services_list = list(merged.values())
 
     ranked_by_s1 = sorted(services_list, key=lambda x: x["_stage1_score"],   reverse=True)
     ranked_by_ep = sorted(services_list, key=lambda x: x["_best_ep_score"], reverse=True)
 
-    # Rank 1-based come da formulazione originale di Cormack et al. (2009):
-    # il primo classificato ha rank=1, contribuendo con 1/(K+1) allo score.
+    # 1-based rank as per the original formulation of Cormack et al. (2009):
+    # the first classified has rank=1, contributing 1/(K+1) to the score.
     s1_rank = {s["_id"]: i for i, s in enumerate(ranked_by_s1, start=1)}
     ep_rank = {s["_id"]: i for i, s in enumerate(ranked_by_ep, start=1)}
 
@@ -695,16 +695,16 @@ def vector_search_original():
         for s in ordered_services
     )
     logger.info(
-        f"[RRF] K={K_RRF} | ranking finale di {len(ordered_services)} servizi:\n"
+        f"[RRF] K={K_RRF} | final ranking of {len(ordered_services)} services:\n"
         f"    {rrf_rows}"
     )
 
-    # ── Endpoint-level ranking (Eq. 1) per la valutazione SOCBench-D ─────────
-    # Restituisce il ranking piatto delle operazioni con la formula del paper:
+    # ── Endpoint-level ranking (Eq. 1) for SOCBench-D evaluation ─────────
+    # Returns the flat ranking of operations with the paper formula:
     #   F(o) = 1/(K + rho1(service(o))) + 1/(K + rho2(o))
-    # rho1 = rank del servizio in Stage 1, rho2 = rank globale dell'operazione
-    # in Stage 2 (CrossEncoder). Include TUTTI gli endpoint, non solo i top-6
-    # usati nel payload di produzione, e bypassa il token budget.
+    # rho1 = service rank in Stage 1, rho2 = global rank of the operation
+    # in Stage 2 (CrossEncoder). Includes ALL endpoints, not only the top-6
+    # used in the production payload, and bypasses the token budget.
     if data.get("return_endpoints"):
         all_scored = []
         for doc_id, op_scores in scores_by_service.items():
@@ -734,26 +734,26 @@ def vector_search_original():
             "ranked_endpoints": ranked_endpoints,
         }), 200
 
-    # Cleanup campi interni prima del token budget
+    # Cleanup internal fields before the token budget
     for s in ordered_services:
         s.pop("_stage1_score", None)
         s.pop("_best_ep_score", None)
         s.pop("_rrf_score", None)
 
     # ════════════════════════════════════════════════════════════════════════
-    # TOKEN BUDGET con trimming graceful
+    # TOKEN BUDGET with graceful trimming
     #
-    # Per ogni servizio si tenta prima l'inserimento con tutti gli endpoint.
-    # Se non ci sta nel budget residuo, si scala progressivamente il numero
-    # di endpoint (top-N per ep_score, già ordinati) fino a trovare la
-    # configurazione minima che entra. Solo se nemmeno il singolo endpoint
-    # migliore entra nel budget, il servizio viene scartato.
+    # For each service it first attempts insertion with all endpoints.
+    # If it does not fit the remaining budget, it progressively scales down the number
+    # of endpoints (top-N by ep_score, already sorted) until it finds the
+    # minimal configuration that fits. Only if not even the single best
+    # endpoint fits the budget is the service discarded.
     # ════════════════════════════════════════════════════════════════════════
     _DICT_FIELDS = ("capabilities", "endpoints", "response_schemas",
                     "request_schemas", "parameters")
 
     def _trim_service(s: dict, keep_ops: list) -> dict:
-        """Restituisce una copia del servizio con solo gli endpoint in keep_ops."""
+        """Returns a copy of the service with only the endpoints in keep_ops."""
         trimmed = {}
         for k, v in s.items():
             if k in _DICT_FIELDS and isinstance(v, dict):
@@ -762,13 +762,13 @@ def vector_search_original():
                 trimmed[k] = v
         return trimmed
 
-    # Budget di token per l'intero payload di retrieval (misurato col tokenizer
-    # del reranker). Alimenta il prompt del Planner, che gira a num_ctx=16384:
-    #Configurabile via env per adattarlo all'hardware.
+    # Token budget for the entire retrieval payload (measured with the reranker
+    # tokenizer). Feeds the Planner prompt, which runs at num_ctx=16384:
+    #Configurable via env to adapt it to the hardware.
     max_tokens     = int(os.environ.get("RETRIEVAL_TOKEN_BUDGET", "7000"))
     current_tokens = 0
     top_results    = []
-    budget_log     = []  # (service_id, n_inseriti, n_totali, nomi_endpoint)
+    budget_log     = []  # (service_id, n_inserted, n_total, endpoint_names)
 
     for s in ordered_services:
         ops = list(s.get("capabilities", {}).keys())
@@ -787,9 +787,9 @@ def vector_search_original():
 
         if not inserted:
             logger.info(
-                f"[BUDGET] {s['_id']} escluso: nemmeno il top-1 endpoint "
+                f"[BUDGET] {s['_id']} excluded: not even the top-1 endpoint "
                 f"({count_tokens(json.dumps(_trim_service(s, ops[:1])))} tok) "
-                f"entra nel budget residuo ({max_tokens - current_tokens} tok)"
+                f"fits in the remaining budget ({max_tokens - current_tokens} tok)"
             )
 
     budget_rows = "\n    ".join(
@@ -799,7 +799,7 @@ def vector_search_original():
     logger.info(
         f"[SEARCH] Stage1={len(stage1_scores)} → Stage2={len(merged)} → "
         f"RRF_ranked={len(ordered_services)} → "
-        f"{len(top_results)} nel budget | token usati: {current_tokens}/{max_tokens}\n"
+        f"{len(top_results)} in budget | tokens used: {current_tokens}/{max_tokens}\n"
         f"    {budget_rows}"
     )
     return jsonify({"results": top_results}), 200
@@ -809,24 +809,24 @@ def vector_search_original():
 #def vector_search_ablation():
 def vector_search():
     """
-    Single-stage classico (baseline R0).
+    Classic single-stage (baseline R0).
 
     Pipeline:
-      Stage 0 (opzionale)  decomposizione query (OFF di default)
-      Stage 1              UNA sola ricerca bi-encoder sugli ENDPOINT
-                           (collection `services`, 1 punto per endpoint)
-      Nessuno Stage 2      niente cross-encoder
-      Nessun RRF           un solo ranking, niente da fondere
-      Token budget         identico al full, con trimming graceful
+      Stage 0 (optional)  query decomposition (OFF by default)
+      Stage 1              ONE single bi-encoder search on the ENDPOINTS
+                           (collection `services`, 1 point per endpoint)
+      No Stage 2           no cross-encoder
+      No RRF               a single ranking, nothing to fuse
+      Token budget         identical to the full one, with graceful trimming
 
-    Differenze vs vector_search():
-      - usa `services` (endpoint-level), non `services_index` (service-level);
-      - non chiama reranker_model.predict();
-      - non calcola _best_ep_score né _rrf_score;
-      - ranking servizi = max(score_endpoint) del bi-encoder;
-      - endpoint ordinati per score bi-encoder e tagliati dal token budget.
+    Differences vs vector_search():
+      - uses `services` (endpoint-level), not `services_index` (service-level);
+      - does not call reranker_model.predict();
+      - does not compute _best_ep_score nor _rrf_score;
+      - service ranking = max(endpoint_score) of the bi-encoder;
+      - endpoints sorted by bi-encoder score and cut by the token budget.
 
-    Payload atteso in `services`:
+    Expected payload in `services`:
         {"mongo_id": "<service>", "http_operation": "<GET /path>"}
     """
     data = request.get_json()
@@ -836,24 +836,24 @@ def vector_search():
     query_text = data["query"]
     max_rank   = data.get("max_rank")
 
-    # ── Parametri ────────────────────────────────────────────────────────
+    # ── Parameters ──────────────────────────────────────────────────────
     STAGE1_K = int(os.environ.get("ABLATION_STAGE1_K", "7"))
 
-    # NON usare 6: era il cap del reranker a due stadi. Nel single-stage
-    # deve essere alto (o assente); il vero limite è il token budget.
+    # Do NOT use 6: it was the cap of the two-stage reranker. In single-stage
+    # it must be high (or absent); the real limit is the token budget.
     TOP_ENDPOINTS_PER_SERVICE = int(
         os.environ.get("ABLATION_TOP_ENDPOINTS_PER_SERVICE", "20")
     )
 
-    # Candidati endpoint da Qdrant. Deve essere >= K * top per servizio,
-    # con un margine: il ranking globale può concentrare molti endpoint
-    # sullo stesso servizio.
+    # Endpoint candidates from Qdrant. Must be >= K * top per service,
+    # with a margin: the global ranking may concentrate many endpoints
+    # on the same service.
     ENDPOINT_CANDIDATES = int(os.environ.get(
         "ABLATION_ENDPOINT_CANDIDATES",
         str(max(STAGE1_K * TOP_ENDPOINTS_PER_SERVICE * 3, 100)),
     ))
 
-    # ── Stage 0: decomposizione (OFF di default per il baseline classico) ─
+    # ── Stage 0: decomposition (OFF by default for the classic baseline) ─
     if os.environ.get("ABLATION_USE_DECOMPOSITION", "false").lower() == "true":
         sub_queries, decomp_meta = decompose_query(query_text)
     else:
@@ -868,7 +868,7 @@ def vector_search():
     )
 
     # ════════════════════════════════════════════════════════════════════
-    # UNICO STADIO: bi-encoder sugli endpoint
+    # SINGLE STAGE: bi-encoder on the endpoints
     # ════════════════════════════════════════════════════════════════════
     endpoint_scores: dict[str, dict[str, float]] = {}
     per_subquery_log = []
@@ -877,12 +877,12 @@ def vector_search():
         sq_embedding = embed_query(sq)
 
         sq_response = qdrant_client.query_points(
-            collection_name=QDRANT_COLLECTION,   # "services": 1 punto/endpoint
+            collection_name=QDRANT_COLLECTION,   # "services": 1 point/endpoint
             query=sq_embedding,
             limit=ENDPOINT_CANDIDATES,
-            # NB: il payload endpoint non ha sample_rank, quindi il filtro
-            # max_rank non si può applicare qui. Lo applichiamo dopo,
-            # leggendo sample_rank dal documento Mongo.
+            # NB: the endpoint payload has no sample_rank, so the max_rank
+            # filter cannot be applied here. We apply it later,
+            # reading sample_rank from the Mongo document.
         )
 
         ids_for_log = []
@@ -890,7 +890,7 @@ def vector_search():
             sid = r.payload["mongo_id"]
             op  = r.payload["http_operation"]
 
-            # Con più sotto-query tieni il max score per endpoint.
+            # With multiple sub-queries keep the max score per endpoint.
             prev = endpoint_scores.setdefault(sid, {}).get(op)
             if prev is None or r.score > prev:
                 endpoint_scores[sid][op] = float(r.score)
@@ -902,16 +902,16 @@ def vector_search():
         )
 
     if not endpoint_scores:
-        logger.warning("[ABLATION] Stage 1: nessun endpoint trovato in `services`")
+        logger.warning("[ABLATION] Stage 1: no endpoint found in `services`")
         return jsonify({"results": []}), 200
 
     logger.info(
-        f"[ABLATION][STAGE 1] {len(endpoint_scores)} servizi da "
-        f"{sum(len(v) for v in endpoint_scores.values())} endpoint:\n"
+        f"[ABLATION][STAGE 1] {len(endpoint_scores)} services from "
+        f"{sum(len(v) for v in endpoint_scores.values())} endpoints:\n"
         + "\n".join(per_subquery_log)
     )
 
-    # ── Servizi ordinati per miglior score di endpoint (MaxP) ────────────
+    # ── Services sorted by best endpoint score (MaxP) ────────────
     ranked_services = sorted(
         endpoint_scores.items(),
         key=lambda kv: max(kv[1].values()),
@@ -928,22 +928,22 @@ def vector_search():
              "parameters": 1, "sample_rank": 1}
         )
         if not retrieved:
-            logger.warning(f"[ABLATION] Servizio '{doc_id}' non trovato in MongoDB")
+            logger.warning(f"[ABLATION] Service '{doc_id}' not found in MongoDB")
             continue
 
-        # Scoping max_rank: stessa semantica del filtro Stage 1.
+        # max_rank scoping: same semantics as the Stage 1 filter.
         if max_rank is not None:
             sr = retrieved.get("sample_rank")
             if sr is not None and int(sr) >= int(max_rank):
                 logger.info(
-                    f"[ABLATION][SCOPE] {doc_id} scartato: "
+                    f"[ABLATION][SCOPE] {doc_id} discarded: "
                     f"sample_rank={sr} >= max_rank={max_rank}"
                 )
                 continue
 
         capabilities = retrieved.get("capabilities", {}) or {}
 
-        # Solo endpoint effettivamente recuperati e ancora presenti nel doc.
+        # Only endpoints actually retrieved and still present in the doc.
         scored_ops = sorted(
             [(op, sc) for op, sc in op_scores.items() if op in capabilities],
             key=lambda x: x[1],
@@ -975,7 +975,7 @@ def vector_search():
         )
         logger.info(
             f"[ABLATION][STAGE 1] {doc_id} best={max(op_scores.values()):.4f}\n"
-            f"          SELEZIONATI ({len(selected_ops)}/{len(capabilities)}):\n"
+            f"          SELECTED ({len(selected_ops)}/{len(capabilities)}):\n"
             f"            {ep_rows}"
         )
 
@@ -983,7 +983,7 @@ def vector_search():
         return jsonify({"results": []}), 200
 
     # ════════════════════════════════════════════════════════════════════
-    # TOKEN BUDGET (identico al full, ma senza reranking)
+    # TOKEN BUDGET (same as the full pipeline, but without reranking)
     # ════════════════════════════════════════════════════════════════════
     _DICT_FIELDS = ("capabilities", "endpoints", "response_schemas",
                     "request_schemas", "parameters")
@@ -1003,8 +1003,8 @@ def vector_search():
     budget_log     = []
 
     for s in ordered_services:
-        # L'ordine è già quello dello score bi-encoder: il trimming
-        # dal fondo scarta gli endpoint meno rilevanti.
+        # The order is already the bi-encoder score order: trimming
+        # from the tail discards the least relevant endpoints.
         ops = list(s.get("capabilities", {}).keys())
 
         inserted = False
@@ -1021,8 +1021,8 @@ def vector_search():
 
         if not inserted:
             logger.info(
-                f"[ABLATION][BUDGET] {s['_id']} escluso: nemmeno il top-1 "
-                f"endpoint entra nel budget residuo "
+                f"[ABLATION][BUDGET] {s['_id']} excluded: not even the top-1 "
+                f"endpoint fits in the remaining budget "
                 f"({max_tokens - current_tokens} tok)"
             )
 
@@ -1032,8 +1032,8 @@ def vector_search():
     )
     logger.info(
         f"[ABLATION][SEARCH] endpoint={sum(len(v) for v in endpoint_scores.values())} → "
-        f"servizi={len(ordered_services)} → {len(top_results)} nel budget | "
-        f"token usati: {current_tokens}/{max_tokens}\n    {budget_rows}"
+        f"services={len(ordered_services)} → {len(top_results)} in budget | "
+        f"tokens used: {current_tokens}/{max_tokens}\n    {budget_rows}"
     )
 
     return jsonify({"results": top_results}), 200
@@ -1048,7 +1048,7 @@ def create_or_update_service():
     data["_id"] = doc_id
     data.pop("id", None)
 
-    # ── Stage 2 index: 1 vettore per endpoint (capability text) ──────────────
+    # ── Stage 2 index: 1 vector per endpoint (capability text) ──────────────
     capabilities = data.get("capabilities", {})
     for http_op, capability in capabilities.items():
         embedding = embed_passage(capability)
@@ -1064,16 +1064,16 @@ def create_or_update_service():
             ]
         )
 
-    # ── Stage 1 index: 1 vettore per servizio (description text) ─────────────
-    # Preferisce description. Usa generated_description solo se description
-    # è assente o troppo corta (<100 caratteri).
+    # ── Stage 1 index: 1 vector per service (description text) ─────────────
+    # Prefers description. Uses generated_description only if description
+    # is missing or too short (<100 characters).
     text_to_index, source = select_stage1_text(data)
     if text_to_index:
         desc_vector_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"desc:{doc_id}"))
         desc_embedding = embed_passage(text_to_index)
-        # sample_rank (se presente nel doc) finisce nel payload Stage 1: serve al
-        # filtro max_rank per scoping del catalogo nei test di robustezza. I mock
-        # smart-city non hanno questo campo → restano sempre inclusi.
+        # sample_rank (if present in the doc) goes into the Stage 1 payload: it is
+        # used by the max_rank filter to scope the catalog in robustness tests.
+        # Smart-city mocks do not have this field → they are always included.
         stage1_payload = {"mongo_id": doc_id}
         if data.get("sample_rank") is not None:
             stage1_payload["sample_rank"] = int(data["sample_rank"])
@@ -1087,7 +1087,7 @@ def create_or_update_service():
                 )
             ]
         )
-        logger.info(f"[INDEX] Service '{doc_id}' indexed in services_index (fonte: {source})")
+        logger.info(f"[INDEX] Service '{doc_id}' indexed in services_index (source: {source})")
 
     collection.replace_one({"_id": doc_id}, data, upsert=True)
     return jsonify({"status": "ok", "id": doc_id}), 200
@@ -1096,12 +1096,12 @@ def create_or_update_service():
 @app.route("/services/<string:service_id>/rank", methods=["PATCH"])
 def set_service_rank(service_id):
     """
-    Imposta sample_rank su un servizio già presente, SENZA ri-embedding:
-      - aggiorna il documento Mongo;
-      - aggiorna il payload del punto nello Stage 1 index (services_index)
-        via set_payload (filtro su mongo_id).
-    Usato dal backfill per taggare i distrattori già caricati, così il filtro
-    max_rank può scopare il catalogo senza reimportare nulla.
+    Set sample_rank on an existing service WITHOUT re-embedding:
+      - update the Mongo document;
+      - update the payload of the point in the Stage 1 index (services_index)
+        via set_payload (filter on mongo_id).
+    Used by backfill to tag already loaded distractors, so the max_rank filter
+    can scope the catalog without reimporting anything.
     Body: {"sample_rank": <int>}
     """
     data = request.get_json(silent=True) or {}
@@ -1146,11 +1146,11 @@ def delete_service(service_id):
 @app.route("/index/reindex", methods=["POST"])
 def reindex_descriptions():
     """
-    Reindicizza i testi descrittivi di tutti i servizi in services_index (Stage 1).
+    Reindex the descriptive texts of all services in services_index (Stage 1).
 
-    Preferisce description; usa generated_description solo come fallback quando
-    description è assente o inferiore a 100 caratteri.
-    Usa embed_passage() per il corretto ruolo asimmetrico.
+    Prefers description; uses generated_description only as a fallback when
+    description is missing or shorter than 100 characters.
+    Uses embed_passage() for the correct asymmetric role.
     """
     docs    = list(collection.find())
     indexed = 0
@@ -1159,14 +1159,14 @@ def reindex_descriptions():
         doc_id = doc.get("_id")
         text_to_index, source = select_stage1_text(doc)
         if not text_to_index:
-            logger.warning(f"[REINDEX] {doc_id}: nessuna description disponibile, saltato")
+            logger.warning(f"[REINDEX] {doc_id}: no description available, skipped")
             skipped += 1
             continue
         try:
             desc_vector_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"desc:{doc_id}"))
             desc_embedding = embed_passage(text_to_index)
-            # Riporta sample_rank dal doc Mongo nel payload Stage 1, così i
-            # distrattori restano filtrabili con max_rank anche dopo il reindex.
+            # Copy sample_rank from the Mongo doc into the Stage 1 payload, so that
+            # distractors remain filterable with max_rank even after reindexing.
             reindex_payload = {"mongo_id": doc_id}
             if doc.get("sample_rank") is not None:
                 reindex_payload["sample_rank"] = int(doc["sample_rank"])
@@ -1180,22 +1180,22 @@ def reindex_descriptions():
                     )
                 ]
             )
-            logger.info(f"[REINDEX] {doc_id} indicizzato (fonte: {source})")
+            logger.info(f"[REINDEX] {doc_id} indexed (source: {source})")
             indexed += 1
         except Exception as e:
             logger.error(f"[REINDEX] {doc_id} failed: {e}")
             skipped += 1
 
-    logger.info(f"[REINDEX] Completato: {indexed} indicizzati, {skipped} saltati")
+    logger.info(f"[REINDEX] Completed: {indexed} indexed, {skipped} skipped")
     return jsonify({"indexed": indexed, "skipped": skipped}), 200
 
 
 @app.route("/services/<string:service_id>/schemas", methods=["PATCH"])
 def update_service_schemas(service_id):
     """
-    Aggiorna response_schemas, request_schemas, parameters e/o
-    generated_description di un servizio.
-    Chiamato dall'api-importer dopo aver estratto gli schema con prance.
+    Update response_schemas, request_schemas, parameters and/or
+    generated_description of a service.
+    Called by api-importer after extracting schemas with prance.
     """
     data = request.get_json()
     update_fields = {}

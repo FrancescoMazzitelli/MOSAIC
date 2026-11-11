@@ -1,16 +1,16 @@
-"""Provider dei prompt di sistema e utente usati dal planner LLM.
+"""Provider of the system and user prompts used by the LLM planner.
 
-Questo modulo costruisce il system prompt e l'user prompt necessari per il
-planner. Supporta:
-- un file esterno di template di system prompt tramite
+This module builds the system prompt and the user prompt required by the
+planner. It supports:
+- an external system prompt template file via
   `PLANNER_SYSTEM_PROMPT_PATH`,
-- una logica di fallback in Python con sentinelle per gestire le modalità
-  `MOCK` e `REAL`,
-- la generazione di un user prompt che descrive i servizi, gli endpoint,
-  gli schemi e la query utente.
+- fallback logic in Python with sentinels to handle the
+  `MOCK` and `REAL` modes,
+- generation of a user prompt describing services, endpoints,
+  schemas and the user query.
 
-Il template di system prompt usa sentinelle speciali (`@@HC12_BLOCK@@` e
-`@@HC12_SELFCHECK@@`) per iniettare regole specifiche della modalità.
+The system prompt template uses special sentinels (`@@HC12_BLOCK@@` and
+`@@HC12_SELFCHECK@@`) to inject mode-specific rules.
 """
 
 import json
@@ -19,9 +19,9 @@ import sys
 from pathlib import Path
 
 
-# Frammenti iniettati in Python in base a BACKEND_MODE (come nel vecchio
-# _build_system_prompt). Restano nel codice: un solo file di prompt esterno,
-# con due sentinelle, copre sia MOCK sia REAL.
+# Fragments injected in Python based on BACKEND_MODE (as in the old
+# _build_system_prompt). They stay in the code: a single external prompt file,
+# with two sentinels, covers both MOCK and REAL.
 _HC12_BLOCK = """
 
 HC-12  NO AND-COMBINATION OF QUERY PARAMS
@@ -41,28 +41,28 @@ _SELFCHECK_REAL = "  □ Every query param in a GET url is documented in the end
 
 
 class PromptProvider:
-    """Fornisce i prompt di sistema e utente al planner LLM.
+    """Provides the system and user prompts to the LLM planner.
 
-    `PromptProvider` costruisce un system prompt e un user prompt coerenti con il
-    catalogo di servizi scoperto dal sistema e con la modalità di backend.
+    `PromptProvider` builds a system prompt and a user prompt consistent with the
+    service catalog discovered by the system and with the backend mode.
 
-    Il system prompt può essere letto da file esterno con `PLANNER_SYSTEM_PROMPT_PATH`
-    oppure generato dinamicamente con `_build_template()`.
-    La modalità `backend_mode` viene applicata alla fine tramite `_apply_mode()`.
+    The system prompt can be read from an external file with `PLANNER_SYSTEM_PROMPT_PATH`
+    or generated dynamically with `_build_template()`.
+    The `backend_mode` is applied at the end via `_apply_mode()`.
     """
 
     def __init__(self):
         self.system_prompt_path = os.environ.get("PLANNER_SYSTEM_PROMPT_PATH")
 
     def system_prompt(self, backend_mode: str = "MOCK") -> str:
-        """Restituisce il system prompt formattato per la modalità scelta.
+        """Returns the system prompt formatted for the selected mode.
 
         Args:
-            backend_mode (str): 'MOCK' o 'REAL'. Determina quali blocchi e
-                self-check includere nel prompt.
+            backend_mode (str): 'MOCK' or 'REAL'. Determines which blocks and
+                self-checks to include in the prompt.
 
         Returns:
-            str: testo completo del system prompt.
+            str: full text of the system prompt.
         """
         if self.system_prompt_path and Path(self.system_prompt_path).exists():
             template = Path(self.system_prompt_path).read_text(encoding="utf-8")
@@ -71,12 +71,12 @@ class PromptProvider:
         return self._apply_mode(template, backend_mode)
 
     def _apply_mode(self, template: str, backend_mode: str) -> str:
-        """Applica le varianti di prompt in base al backend mode.
+        """Applies the prompt variants based on the backend mode.
 
-        La funzione sostituisce le sentinelle `@@HC12_BLOCK@@` e
-        `@@HC12_SELFCHECK@@` con i blocchi corretti per MOCK o REAL.
+        The function replaces the `@@HC12_BLOCK@@` and
+        `@@HC12_SELFCHECK@@` sentinels with the correct blocks for MOCK or REAL.
         """
-        # Intercetta HC-12 in Python: presente in MOCK, assente in REAL.
+        # Handle HC-12 in Python: present in MOCK, absent in REAL.
         if backend_mode == "REAL":
             hc12, selfcheck = "", _SELFCHECK_REAL
         else:
@@ -88,20 +88,20 @@ class PromptProvider:
                     discovered_endpoints, discovered_schemas,
                     discovered_request_schemas, discovered_parameters,
                     query, input_files=None) -> str:
-        """Costruisce l'user prompt completo per il planner.
+        """Builds the complete user prompt for the planner.
 
         Args:
-            discovered_services (list): informazioni sui servizi scoperti.
-            discovered_capabilities (list): capacità testuali per servizio.
-            discovered_endpoints (list): endpoint URL per servizio.
-            discovered_schemas (list): response schemas scoperti.
-            discovered_request_schemas (list): request schemas scoperti.
-            discovered_parameters (list): parametri endpoint scoperti.
-            query (str): query dell'utente.
-            input_files (any, optional): informazioni sui file caricati.
+            discovered_services (list): information about the discovered services.
+            discovered_capabilities (list): textual capabilities per service.
+            discovered_endpoints (list): endpoint URLs per service.
+            discovered_schemas (list): discovered response schemas.
+            discovered_request_schemas (list): discovered request schemas.
+            discovered_parameters (list): discovered endpoint parameters.
+            query (str): the user query.
+            input_files (any, optional): information about the uploaded files.
 
         Returns:
-            str: testo completo dell'user prompt.
+            str: full text of the user prompt.
         """
         return self._build_user_prompt(
             discovered_services, discovered_capabilities, discovered_endpoints,
@@ -109,16 +109,16 @@ class PromptProvider:
             query, input_files)
 
     def _build_template(self) -> str:
-        """Genera il system prompt di default, comprensivo di esempi.
+        """Generates the default system prompt, including examples.
 
-        Il prompt di default include una serie di esempi esaustivi che spiegano
-        al modello come costruire piani di esecuzione validi in base ai servizi
-        disponibili. La generazione si basa su un unico template con sentinelle
-        sostituite da `_apply_mode()`.
+        The default prompt includes a set of exhaustive examples that explain
+        to the model how to build valid execution plans based on the available
+        services. Generation is based on a single template with sentinels
+        replaced by `_apply_mode()`.
         """
 
-        # HC-12 (solo MOCK) e relativa self-check sono iniettati da
-        # _apply_mode() tramite le sentinelle @@HC12_BLOCK@@ / @@HC12_SELFCHECK@@.
+        # HC-12 (MOCK only) and its self-check are injected by
+        # _apply_mode() via the @@HC12_BLOCK@@ / @@HC12_SELFCHECK@@ sentinels.
 
         # ── EXAMPLES ─────────────────────────────────────────────────────────
         # Six examples, one per structurally distinct pattern family.
@@ -579,13 +579,13 @@ Common patterns:
                            discovered_endpoints, discovered_schemas,
                            discovered_request_schemas, discovered_parameters,
                            query, input_files=None) -> str:
-        """Costruisce il prompt utente con tutti i dettagli dei servizi scoperti.
+        """Builds the user prompt with all the details of the discovered services.
 
-        L'user prompt include:
-        - lista dei servizi e dei loro endpoint,
-        - descrizioni dei parametri e degli schemi request/response,
-        - eventuali file allegati,
-        - la query dell'utente.
+        The user prompt includes:
+        - the list of services and their endpoints,
+        - parameter descriptions and request/response schemas,
+        - any attached files,
+        - the user query.
         """
         lines = ["SERVICES AND ENDPOINTS:"]
         for i, service in enumerate(discovered_services):
@@ -618,7 +618,7 @@ QUERY:
 {query}"""
 
 if __name__ == "__main__":
-    # Esporta il template (UNICO, con sentinelle) come base editabile:
+    # Export the template (the ONLY one, with sentinels) as an editable base:
     #   python -m service.planning.prompt_provider config/prompts/planner_system.md
     out = sys.argv[1] if len(sys.argv) > 1 else "planner_system.md"
     Path(out).parent.mkdir(parents=True, exist_ok=True)

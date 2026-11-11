@@ -3,7 +3,7 @@ import org.yaml.snakeyaml.Yaml
 import java.net.URL
 import java.net.HttpURLConnection
 
-// ── Costanti — identico pattern dei tuoi smart-city ───────────────────────
+// ── Constants — same pattern as the smart-city services ──────────────────
 def SERVICE_ID   = "tmdb"
 def SERVICE_NAME = "TMDB"
 def API          = "TMDB"
@@ -62,7 +62,7 @@ def catalogPayload = [
     capabilities: capabilities, endpoints: endpoints
 ]
 
-// Health check su Microcks /health — stesso pattern dei tuoi smart-city
+// Health check against Microcks /health — same pattern as the smart-city services
 def consulPayload = [
     Name: SERVICE_NAME, Id: SERVICE_ID,
     Meta: [service_doc_id: SERVICE_ID],
@@ -119,5 +119,5 @@ try {
     }
 } catch (Exception e) { println "[consul] FAILED: ${e.message}"; return "fail" }
 
-println "[tmdb] ✅ ${capabilities.size()} endpoints registrati"
+println "[tmdb] ✅ ${capabilities.size()} endpoints registered"
 return "ok"

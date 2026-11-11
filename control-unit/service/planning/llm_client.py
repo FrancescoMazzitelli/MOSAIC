@@ -1,10 +1,10 @@
-"""Client per chiamare Ollama con guided decoding.
+"""Client for calling Ollama with guided decoding.
 
-Questo modulo incapsula la richiesta verso l'endpoint `/api/chat` di Ollama.
-Il payload include il modello da utilizzare, il formato di output richiesto e i
-messaggi di sistema/utente. Il metodo `complete()` inietta dinamicamente lo
-schema di input nel formato di output fornito, in modo da validare la
-struttura delle risposte generate.
+This module encapsulates the request to Ollama's `/api/chat` endpoint.
+The payload includes the model to use, the required output format and the
+system/user messages. The `complete()` method dynamically injects the
+input schema into the provided output format, so as to validate the
+structure of the generated responses.
 """
 
 import os
@@ -14,12 +14,12 @@ import requests
 
 
 class LLMClient:
-    """Isola la chiamata a Ollama (/api/chat con guided decoding).
+    """Isolates the call to Ollama (/api/chat with guided decoding).
 
-    Lo schema di output arriva DA FUORI (SchemaProvider) e qui viene completato
-    iniettando lo schema dinamico del campo 'input' costruito dai request_schema
-    del registry. Equivale al vecchio query_ollama, ma format e input non sono
-    piu' cablati nel metodo.
+    The output schema comes FROM OUTSIDE (SchemaProvider) and is completed here
+    by injecting the dynamic schema of the 'input' field built from the registry's
+    request_schemas. It is equivalent to the old query_ollama, but format and input are no
+    longer hardcoded in the method.
     """
 
     def __init__(self, model_name: str):
@@ -28,32 +28,32 @@ class LLMClient:
 
     def complete(self, system_prompt: str, user_prompt: str,
                  output_schema: dict, input_schema: dict | None = None) -> tuple[str, float]:
-        """Chiede a Ollama di completare un prompt con guided decoding, iniettando
-        dinamicamente lo schema dell'input all'interno dello schema di output.
+        """Asks Ollama to complete a prompt with guided decoding, dynamically injecting
+        the input schema inside the output schema.
 
         Args:
-            system_prompt (str): prompt di sistema per il modello.
-            user_prompt (str): prompt dell'utente da inviare al modello.
-            output_schema (dict): schema JSON di output richiesto da Ollama.
-            input_schema (dict | None): schema del campo `input` da iniettare nel
-                formato di output, se disponibile.
+            system_prompt (str): system prompt for the model.
+            user_prompt (str): user prompt to send to the model.
+            output_schema (dict): JSON output schema required by Ollama.
+            input_schema (dict | None): schema of the `input` field to inject into the
+                output format, if available.
 
         Returns:
-            tuple[str, float]: coppia contenente il testo generato e il tempo di
-                elaborazione in secondi.
+            tuple[str, float]: pair containing the generated text and the processing
+                time in seconds.
 
         Raises:
-            RuntimeError: in caso di errore HTTP o di parsing della risposta.
+            RuntimeError: on HTTP error or response parsing error.
         """
         schema = copy.deepcopy(output_schema)
         try:
-            # Aggiungiamo lo schema dell'input all'interno dei tasks prima di
-            # inviare la richiesta a Ollama, preservando l'output_schema esterno.
+            # Add the input schema inside the tasks before
+            # sending the request to Ollama, preserving the external output_schema.
             schema["properties"]["tasks"]["items"]["properties"]["input"] = \
                 input_schema or {"type": ["string", "object", "null"]}
         except (KeyError, TypeError):
-            # Se lo schema ha una struttura diversa da quella prevista, lo
-            # usiamo senza modifiche.
+            # If the schema has a different structure than expected, use it
+            # without modifications.
             pass
 
         try:

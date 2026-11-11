@@ -89,7 +89,7 @@ def compare(json_data, oracle_map):
         elif not matches:
             status = "incorrect"
 
-        # === METRICHE ===
+        # === METRICS ===
         tp = len(matches)
         fp = len(mismatches)
         fn = max(0, len(oracle_steps) - tp)

@@ -4,31 +4,31 @@ set -euo pipefail
 # ============================================================================
 # MOSAIC on SOCBench-D — full automatic run
 #
-#   1. (opzionale) avvia lo stack Docker per il retrieval (Mongo + Qdrant +
+#   1. (optional) start the Docker stack for retrieval (Mongo + Qdrant +
 #      db-gateway + api-importer + registry + redis + mock-server)
-#   2. registra i 275 servizi SOCBench-D nel catalogo (riprendibile)
-#   3. esegue il benchmark di retrieval sui 550 query (solo variante mosaic)
-#   4. ricostruisce la tabella LaTeX con le righe MOSAIC misurate + i baseline
-#      Pesl et al. già calcolati dagli autori del paper
+#   2. register the 275 SOCBench-D services in the catalog (resumable)
+#   3. run the retrieval benchmark on the 550 queries (mosaic variant only)
+#   4. rebuild the LaTeX table with the measured MOSAIC rows + the Pesl et al.
+#      baselines already computed by the paper's authors
 #
-# I baseline (BGE / OpenAI / NVIDIA, 8 chunking strategy) non vengono
-# ricalcolati: sono già riportati nel paper e hardcoded in make_table.py.
-# Questo script misura SOLO la riga MOSAIC.
+# The baselines (BGE / OpenAI / NVIDIA, 8 chunking strategies) are not
+# recomputed: they are already reported in the paper and hardcoded in make_table.py.
+# This script measures ONLY the MOSAIC row.
 #
-# Uso:
-#   ./run.sh                        # full run (~10 minuti + tempo di import)
-#   ./run.sh --skip-stack           # stack già avviato
-#   ./run.sh --skip-register        # servizi già registrati
-#   ./run.sh --max-cases 1          # smoke test: 1 dominio, 10 query
-#   ./run.sh --embedder qwen        # usa Qwen3-Embedding invece di BGE
-#   ./run.sh --tag bge             # nome file di output (default: tag from args)
+# Usage:
+#   ./run.sh                        # full run (~10 minutes + import time)
+#   ./run.sh --skip-stack           # stack already started
+#   ./run.sh --skip-register        # services already registered
+#   ./run.sh --max-cases 1          # smoke test: 1 domain, 10 queries
+#   ./run.sh --embedder qwen        # use Qwen3-Embedding instead of BGE
+#   ./run.sh --tag bge             # output file name (default: tag from args)
 # ============================================================================
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$ROOT/../.." && pwd)"
 COMPOSE_FILE="$PROJECT_ROOT/Compose.yaml"
 
-# ── Flag di controllo ──────────────────────────────────────────────────────
+# ── Control flags ──────────────────────────────────────────────────────────
 SKIP_STACK=false
 SKIP_REGISTER=false
 EXTRA_ARGS=()
@@ -40,17 +40,17 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# ── 1. Avvio dello stack Docker (solo servizi di retrieval) ────────────────
+# ── 1. Start the Docker stack (retrieval services only) ────────────────────
 if ! $SKIP_STACK; then
   echo ""
   echo "═══════════════════════════════════════════════════════════════"
-  echo "  STEP 1/4 — Avvio stack Docker (retrieval-only, no control-unit)"
+  echo "  STEP 1/4 — Starting Docker stack (retrieval-only, no control-unit)"
   echo "═══════════════════════════════════════════════════════════════"
   cd "$PROJECT_ROOT"
   docker compose -f "$COMPOSE_FILE" up -d --build \
     registry catalog-data catalog-vector catalog-gateway \
     api-importer healthcheck-service mock-server
-  echo "  Attendo che il catalog-gateway sia ready..."
+  echo "  Waiting for catalog-gateway to become ready..."
   for i in $(seq 1 60); do
     if curl -sf http://localhost:5000/health >/dev/null 2>&1; then
       echo "  catalog-gateway ready."
@@ -59,62 +59,62 @@ if ! $SKIP_STACK; then
     sleep 2
   done
   if ! curl -sf http://localhost:5000/health >/dev/null 2>&1; then
-    echo "  [ERROR] catalog-gateway non risponde dopo 120s."
+    echo "  [ERROR] catalog-gateway did not respond after 120s."
     exit 1
   fi
 fi
 
-# ── 2. Registrazione dei servizi SOCBench-D ─────────────────────────────────
+# ── 2. Registering the SOCBench-D services ─────────────────────────────────
 if ! $SKIP_REGISTER; then
   echo ""
   echo "═══════════════════════════════════════════════════════════════"
-  echo "  STEP 2/4 — Registrazione 275 servizi SOCBench-D (Mongo + Qdrant)"
+  echo "  STEP 2/4 — Registering 275 SOCBench-D services (Mongo + Qdrant)"
   echo "═══════════════════════════════════════════════════════════════"
   cd "$ROOT"
   python register_gateway.py --workers 2 "${EXTRA_ARGS[@]}"
 fi
 
-# ── 2b. Registrazione in Consul (registry) ──────────────────────────────────
-# register_gateway.py scrive solo in Mongo/Qdrant via api-importer; i servizi
-# devono essere anche nel registry (Consul) perché la control-unit li trovi.
-# L'endpoint /api/importer/register_existing ri-registra senza riscaricare.
-# URL su localhost: lo script viene eseguito dall'host, non dentro Docker.
+# ── 2b. Registration in Consul (registry) ──────────────────────────────────
+# register_gateway.py only writes to Mongo/Qdrant via api-importer; the services
+# must also be in the registry (Consul) so that the control-unit can find them.
+# The /api/importer/register_existing endpoint re-registers without re-downloading.
+# URLs on localhost: the script runs from the host, not inside Docker.
 echo ""
 echo "═══════════════════════════════════════════════════════════════"
-echo "  STEP 2b/4 — Registrazione in Consul (registry)"
+echo "  STEP 2b/4 — Registering in Consul (registry)"
 echo "═══════════════════════════════════════════════════════════════"
 CONSUL_RESULT=$(curl -sS -X POST http://localhost:7500/api/importer/register_existing)
 echo "  $CONSUL_RESULT"
 echo "$CONSUL_RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f\"  registered={d.get('registered')} skipped={d.get('skipped')} errors={d.get('errors')}\")" 2>/dev/null || true
 
-# ── 2c. Reindicizzazione Stage 1 (services_index in Qdrant) ─────────────────
-# create_or_update_service() scrive in services_index SOLO per i servizi
-# caricati via POST /service (non per quelli via /import/file). I 275 servizi
-# SOCBench-D sono andati su Mongo/Qdrant ma services_index è vuoto.
-# /index/reindex popola services_index dai documenti già in Mongo.
+# ── 2c. Reindex Stage 1 (services_index in Qdrant) ─────────────────────────
+# create_or_update_service() writes to services_index ONLY for services
+# loaded via POST /service (not for those via /import/file). The 275 SOCBench-D
+# services went to Mongo/Qdrant but services_index is empty.
+# /index/reindex populates services_index from the documents already in Mongo.
 echo ""
 echo "═══════════════════════════════════════════════════════════════"
-echo "  STEP 2c/4 — Reindicizzazione Stage 1 (services_index in Qdrant)"
+echo "  STEP 2c/4 — Reindexing Stage 1 (services_index in Qdrant)"
 echo "═══════════════════════════════════════════════════════════════"
 REINDEX_OUTPUT=$(curl -sS -X POST --max-time 900 http://localhost:5000/index/reindex)
 echo "  $REINDEX_OUTPUT"
 
-# ── 3. Benchmark di retrieval (solo MOSAIC) ─────────────────────────────────
+# ── 3. Retrieval benchmark (MOSAIC only) ───────────────────────────────────
 echo ""
 echo "═══════════════════════════════════════════════════════════════"
-echo "  STEP 3/4 — Benchmark retrieval (550 query, variante mosaic)"
+echo "  STEP 3/4 — Retrieval benchmark (550 queries, mosaic variant)"
 echo "═══════════════════════════════════════════════════════════════"
 cd "$ROOT"
 python eval_gateway.py "${EXTRA_ARGS[@]}"
 
-# ── 4. Ricostruzione della tabella LaTeX ────────────────────────────────────
+# ── 4. Rebuilding the LaTeX table ──────────────────────────────────────────
 echo ""
 echo "═══════════════════════════════════════════════════════════════"
-echo "  STEP 4/4 — Tabella LaTeX (MOSAIC + baseline Pesl et al.)"
+echo "  STEP 4/4 — LaTeX table (MOSAIC + Pesl et al. baselines)"
 echo "═══════════════════════════════════════════════════════════════"
 cd "$ROOT"
 python make_table.py
 
 echo ""
-echo "✅ Fatto. Risultati in $ROOT/results/"
+echo "✅ Done. Results in $ROOT/results/"
 ls -la "$ROOT/results/"*.{csv,tex,json,log} 2>/dev/null || true

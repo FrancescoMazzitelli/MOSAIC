@@ -13,7 +13,7 @@ class Discovery:
 
     def __init__(self, address):
         """
-        Inizializza la classe con i dati di connessione.
+        Initializes the class with the connection data.
         """
         self.registry_address = address
 

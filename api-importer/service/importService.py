@@ -1,7 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 import requests
 import yaml
-import prance          # libreria per risolvere i $ref negli OpenAPI YAML
+import prance          # library for resolving $ref in OpenAPI YAML
 import os
 import json
 import re
@@ -12,8 +12,8 @@ import time
 
 class Service:
     # -----------------------------------------------------------------------
-    # Variabili d'ambiente: permettono di configurare gli host senza
-    # modificare il codice (cambiano tra sviluppo locale e Docker)
+    # Environment variables: allow host configuration without changing the
+    # code (they differ between local development and Docker)
     # -----------------------------------------------------------------------
     CONSUL_HOST = os.environ.get("CONSUL_HOST", "registry")
     CONSUL_PORT = int(os.environ.get("CONSUL_PORT", 8500))
@@ -27,26 +27,26 @@ class Service:
     MOCK_SERVER_URL = os.environ.get("MOCK_SERVER_URL", "http://mock-server:8080")
 
     # -----------------------------------------------------------------------
-    # Metodi per importare API esterne da apis.guru
+    # Methods for importing external APIs from apis.guru
     # -----------------------------------------------------------------------
 
     def fetch_providers(self):
-        # recupera la lista di tutti i provider da apis.guru
+        # fetch the list of all providers from apis.guru
         url = "https://api.apis.guru/v2/providers.json"
         response = requests.get(url)
         response.raise_for_status()
         return response.json()["data"]
 
     def fetch_api_details(self, provider):
-        # recupera i dettagli di un provider specifico (versioni, URL YAML, ecc.)
+        # fetch the details of a specific provider (versions, YAML URLs, etc.)
         url = f"https://api.apis.guru/v2/{provider}.json"
         response = requests.get(url)
         response.raise_for_status()
         return response.json()
 
     def extract_swagger_url(self, api_data, provider):
-        # cerca l'URL dello YAML OpenAPI nei metadati del provider
-        # apis.guru può avere strutture diverse (dict o list) — gestisce entrambe
+        # look up the OpenAPI YAML URL in the provider metadata
+        # apis.guru may use different structures (dict or list) — handle both
         apis = api_data.get("apis")
 
         if isinstance(apis, dict):
@@ -66,8 +66,8 @@ class Service:
         return None
 
     def extract_endpoints_from_swagger(self, swagger_url):
-        # estrae solo i path (es. /bin, /bin/{id}) senza processare i dettagli
-        # usato per analisi rapida, non per l'estrazione degli schema
+        # extract only the paths (e.g. /bin, /bin/{id}) without processing details
+        # used for quick inspection, not for schema extraction
         response = requests.get(swagger_url)
         if response.status_code != 200:
             return []
@@ -78,27 +78,27 @@ class Service:
             return []
 
     # -----------------------------------------------------------------------
-    # Helpers per estrazione schema — dotted keys con tipi compatti
-    # Questi metodi sono il cuore del sistema di chaining:
-    # trasformano uno schema OpenAPI complesso in una stringa compatta
-    # che l'LLM può leggere e usare per costruire i placeholder corretti
+    # Schema-extraction helpers — dotted keys with compact types
+    # These methods are the core of the chaining system: they turn a complex
+    # OpenAPI schema into a compact string that the LLM can read and use to
+    # build the correct placeholders
     # -----------------------------------------------------------------------
 
     def _map_type(self, prop_schema):
         """
-        Converte il tipo OpenAPI di una singola property nel tipo compatto
-        usato nella stringa schema passata all'LLM.
+        Convert the OpenAPI type of a single property into the compact type
+        used in the schema string passed to the LLM.
 
-        OpenAPI usa "type: integer", "type: string", ecc.
-        Noi usiamo: int, float, str, bool, enum, arr, obj, any
-        
-        Esempio: {"type": "string", "enum": ["open","closed"]} → "enum"
+        OpenAPI uses "type: integer", "type: string", etc.
+        We use: int, float, str, bool, enum, arr, obj, any
+
+        Example: {"type": "string", "enum": ["open","closed"]} → "enum"
                  {"type": "integer"} → "int"
         """
         if not isinstance(prop_schema, dict):
             return "any"
 
-        # enum ha priorità su type: anche "type: string" con enum è "enum"
+        # enum takes precedence over type: even "type: string" with enum is "enum"
         if prop_schema.get("enum"):
             return "enum"
 
@@ -114,7 +114,7 @@ class Service:
             return "arr"
         if oa_type == "string":
             return "str"
-        # oggetto con properties annidate → "obj" (ma _flatten_dotted lo espande)
+        # object with nested properties → "obj" (but _flatten_dotted expands it)
         if oa_type == "object" or "properties" in prop_schema or "allOf" in prop_schema:
             return "obj"
 
@@ -122,67 +122,67 @@ class Service:
 
     def _flatten_dotted(self, schema, prefix=""):
         """
-        Riceve uno schema OpenAPI già dereferenziato da prance (tutti i $ref
-        sono stati sostituiti con il loro contenuto reale) e restituisce
-        un dizionario piatto con le dotted keys.
+        Take an OpenAPI schema already dereferenced by prance (all $refs have
+        been replaced by their actual content) and return a flat dictionary
+        with dotted keys.
 
-        Esempio di input (schema Bin dopo prance):
+        Example input (Bin schema after prance):
           {allOf: [{properties: {location: {type: str}, fillLevel: {type: int}}},
                    {properties: {id: {type: int}}}]}
 
-        Esempio di output:
+        Example output:
           {"location": "str", "fillLevel": "int", "id": "int"}
 
-        Il prefix viene usato per oggetti annidati:
-          se "address" ha dentro "street" e "city",
-          il risultato è {"address.street": "str", "address.city": "str"}
+        The prefix is used for nested objects:
+          if "address" contains "street" and "city",
+          the result is {"address.street": "str", "address.city": "str"}
         """
         if not isinstance(schema, dict):
             return {}
 
         result = {}
 
-        # --- allOf: pattern usato per l'ereditarietà in OpenAPI ---
-        # Es: Bin = allOf[NewBin, {properties: {id: int}}]
-        # Itera tutti i sotto-schemi e unisce i risultati
+        # --- allOf: the pattern used for inheritance in OpenAPI ---
+        # E.g. Bin = allOf[NewBin, {properties: {id: int}}]
+        # Iterate over all sub-schemas and merge the results
         for sub in schema.get("allOf", []):
             result.update(self._flatten_dotted(sub, prefix))
 
-        # --- anyOf / oneOf: schemi polimorfici ---
-        # Invece di scegliere solo una variante, le unisce tutte
-        # per non perdere campi che potrebbero essere presenti
+        # --- anyOf / oneOf: polymorphic schemas ---
+        # Instead of choosing a single variant, merge all of them
+        # so that fields that may be present are not lost
         for combinator in ("anyOf", "oneOf"):
             for sub in schema.get(combinator, []):
                 result.update(self._flatten_dotted(sub, prefix))
 
-        # --- properties dirette: il caso più comune ---
+        # --- direct properties: the most common case ---
         for prop_name, prop_schema in schema.get("properties", {}).items():
             if not isinstance(prop_schema, dict):
                 prop_schema = {}
 
             full_key = f"{prefix}{prop_name}"  # es: "address.street"
 
-            # ricorre per oggetti annidati (es. prop_schema ha a sua volta properties)
+            # recurse for nested objects (e.g. prop_schema itself has properties)
             sub_props = self._flatten_dotted(prop_schema, f"{full_key}.")
             if sub_props:
-                # oggetto annidato → espande con dotted keys
+                # nested object → expand with dotted keys
                 result.update(sub_props)
             else:
-                # foglia: mappa al tipo compatto
+                # leaf: map to the compact type
                 result[full_key] = self._map_type(prop_schema)
 
-        # --- array: entra solo se non ha già trovato properties ---
-        # (if not result evita di sovrascrivere risultati già trovati)
+        # --- array: only descend if no properties were found yet ---
+        # (if not result avoids overwriting results already found)
         if not result and schema.get("type") == "array":
             items = schema.get("items", {})
 
-            # Guardia: in API esterne (apis.guru) items può essere una lista
-            # (tuple tipizzate OpenAPI 3.1) o una stringa malformata.
-            # In quei casi non possiamo scendere — restituiamo quello che abbiamo.
+            # Guard: in external APIs (apis.guru) items may be a list
+            # (typed OpenAPI 3.1 tuples) or a malformed string.
+            # In those cases we cannot descend — return what we have.
             if not isinstance(items, dict):
                 return result
 
-            # distingue array di oggetti complessi da array di scalari
+            # distinguish arrays of complex objects from arrays of scalars
             has_object_items = (
                 items.get("type") == "object" or
                 "properties" in items or
@@ -192,11 +192,11 @@ class Service:
             if has_object_items:
                 field_name = prefix.rstrip(".")
                 if field_name:
-                    # CASO 1: Array annidato dentro un altro oggetto -> lo marchiamo come "arr"
+                    # CASE 1: Array nested inside another object -> mark it as "arr"
                     result[field_name] = "arr"
                 else:
-                    # CASO 2: Array alla ROOT (la risposta API è una lista di oggetti).
-                    # Dobbiamo scendere dentro 'items' ed estrarre i campi!
+                    # CASE 2: Array at the ROOT (the API response is a list of objects).
+                    # We must descend into 'items' and extract the fields!
                     sub = self._flatten_dotted(items, prefix)
                     if sub:
                         result.update(sub)
@@ -206,7 +206,7 @@ class Service:
                 if sub:
                     result.update(sub)
                 else:
-                    # scalare semplice (es. array of string): rappresenta come "arr"
+                    # simple scalar (e.g. array of string): represent as "arr"
                     field_name = prefix.rstrip(".")
                     if field_name:
                         result[field_name] = "arr"
@@ -215,10 +215,10 @@ class Service:
 
     def _infer_type_from_value(self, value):
         """
-        Inferisce il tipo compatto da un valore concreto di un example.
-        Usata dal fallback quando lo schema OpenAPI è assente.
+        Infer the compact type from a concrete example value.
+        Used by the fallback when the OpenAPI schema is missing.
 
-        Esempio: value=42 → "int", value="open" → "str", value=[...] → "arr"
+        Example: value=42 → "int", value="open" → "str", value=[...] → "arr"
         """
         if isinstance(value, bool):
             return "bool"
@@ -236,16 +236,16 @@ class Service:
 
     def _flatten_dotted_from_example(self, example_value, prefix=""):
         """
-        Versione alternativa di _flatten_dotted che lavora su un valore
-        di esempio concreto invece che su uno schema OpenAPI.
+        Alternative version of _flatten_dotted that works on a concrete example
+        value rather than an OpenAPI schema.
 
-        Usata come fallback quando lo schema è assente o vuoto.
-        Inferisce i tipi dai valori reali invece che dalle dichiarazioni.
+        Used as a fallback when the schema is missing or empty.
+        It infers types from actual values rather than declarations.
 
-        Esempio di input (primo elemento di GET /bin):
+        Example input (first element of GET /bin):
           {"id": 1, "location": "City Square", "fillLevel": 35, "status": "normal"}
 
-        Esempio di output:
+        Example output:
           {"id": "int", "location": "str", "fillLevel": "int", "status": "str"}
         """
         if isinstance(example_value, dict):
@@ -253,7 +253,7 @@ class Service:
             for key, val in example_value.items():
                 full_key = f"{prefix}{key}"
                 if isinstance(val, dict):
-                    # oggetto annidato: ricorre con dotted prefix
+                    # nested object: recurse with the dotted prefix
                     sub = self._flatten_dotted_from_example(val, f"{full_key}.")
                     result.update(sub) if sub else result.update({full_key: "obj"})
                 else:
@@ -261,21 +261,21 @@ class Service:
             return result
 
         elif isinstance(example_value, list) and example_value:
-            # per gli array, analizza solo il primo elemento come rappresentativo
+            # for arrays, analyse only the first element as representative
             return self._flatten_dotted_from_example(example_value[0], prefix)
 
         return {}
 
     def _schema_to_string(self, flat_dict, is_array):
         """
-        Converte il dizionario piatto {campo: tipo} nella stringa compatta
-        che viene salvata in MongoDB e passata all'LLM nel prompt.
+        Convert the flat {field: type} dictionary into the compact string
+        stored in MongoDB and passed to the LLM in the prompt.
 
         is_array=False → "{id:int, location:str, fillLevel:int, status:enum}"
         is_array=True  → "[{id:int, location:str, fillLevel:int, status:enum}]"
 
-        Le parentesi quadre indicano all'LLM che la risposta è un array,
-        quindi dovrà usare l'indice o FIND per accedere agli elementi.
+        The square brackets tell the LLM that the response is an array,
+        so it must use an index or FIND to access the elements.
         """
         if not flat_dict:
             return None
@@ -284,42 +284,42 @@ class Service:
 
     def _collect_required_fields(self, schema):
         """
-        Raccoglie i nomi di tutti i campi required da uno schema.
-        Gestisce anche allOf perché il pattern comune in OpenAPI è:
+        Collect the names of all required fields from a schema.
+        Also handles allOf, because the common OpenAPI pattern is:
 
           NewBin:
             allOf:
-              - $ref: BaseModel   (che ha i suoi required)
+              - $ref: BaseModel   (which has its own required fields)
               - properties: {id}
-                required: [id]    (required aggiuntivi)
+                required: [id]    (additional required fields)
 
-        Ritorna un set di stringhe con i nomi dei campi obbligatori.
-        Usata da _extract_request_schema_from_details per aggiungere il marker *
+        Returns a set of strings with the names of mandatory fields.
+        Used by _extract_request_schema_from_details to add the * marker.
         """
         required = set(schema.get("required", []))
-        # raccoglie anche i required dai sotto-schemi di allOf
+        # also collect required fields from the allOf sub-schemas
         for sub in schema.get("allOf", []):
             required.update(sub.get("required", []))
         return required
 
     def _extract_schema_from_details(self, details):
         """
-        Estrae lo schema della risposta di successo (200 o 201) di un endpoint.
-        Usata per costruire i RESPONSE SCHEMAS passati all'LLM.
+        Extract the success response schema (200 or 201) of an endpoint.
+        Used to build the RESPONSE SCHEMAS passed to the LLM.
 
-        Strategia a due livelli:
-          1. Schema OpenAPI dichiarativo (priorità massima — è la "verità contrattuale")
-          2. Examples come fallback (quando lo schema manca o è vuoto)
+        Two-level strategy:
+          1. Declarative OpenAPI schema (highest priority — the "contract truth")
+          2. Examples as fallback (when the schema is missing or empty)
 
-        HTTP 204 è escluso perché non ha body (DELETE restituisce 204).
+        HTTP 204 is excluded because it has no body (DELETE returns 204).
 
-        Output: stringa tipo "[{id:int, location:str, status:enum}]"
-                oppure None se non riesce a estrarre nulla
+        Output: a string such as "[{id:int, location:str, status:enum}]"
+                or None if nothing can be extracted
         """
         responses = details.get("responses", {})
 
-        # cerca la risposta di successo: 200 (GET/PUT) o 201 (POST)
-        # 204 (DELETE) non ha body → escluso intenzionalmente
+        # find the success response: 200 (GET/PUT) or 201 (POST)
+        # 204 (DELETE) has no body → intentionally excluded
         success_response = None
         for code in ["200", "201", 200, 201]:
             if code in responses:
@@ -329,7 +329,7 @@ class Service:
         if not success_response or not isinstance(success_response, dict):
             return None
 
-        # supporta sia Swagger 2.0 che OpenAPI 3.0 (strutture diverse)
+        # supports both Swagger 2.0 and OpenAPI 3.0 (different structures)
         swagger2_schema   = success_response.get("schema", {})
         swagger2_examples = success_response.get("examples", {})
         swagger2_json_ex  = swagger2_examples.get("application/json") if isinstance(swagger2_examples, dict) else None
@@ -337,8 +337,8 @@ class Service:
         content      = success_response.get("content", {})
         json_content = content.get("application/json", {})
 
-        # --- Strategia 1: Schema dichiarativo (source of truth) ---
-        # preferisce lo schema OpenAPI 3.0, poi il Swagger 2.0
+        # --- Strategy 1: declarative schema (source of truth) ---
+        # prefer the OpenAPI 3.0 schema, then Swagger 2.0
         final_schema = json_content.get("schema") or swagger2_schema
 
         if isinstance(final_schema, dict) and final_schema:
@@ -347,13 +347,13 @@ class Service:
             if flat_dict:
                 return self._schema_to_string(flat_dict, is_array)
 
-        # --- Strategia 2: Examples come fallback ---
-        # usata quando lo schema è assente o non ha properties
+        # --- Strategy 2: examples as fallback ---
+        # used when the schema is missing or has no properties
 
-        # 2a. OpenAPI 3.0 — examples (plurale, dizionario di esempi nominati)
+        # 2a. OpenAPI 3.0 — examples (plural, dictionary of named examples)
         examples = json_content.get("examples", {})
         if examples:
-            # prende il primo esempio disponibile
+            # take the first available example
             first_example = next(iter(examples.values()), None)
             if isinstance(first_example, dict) and first_example.get("value") is not None:
                 ex_val    = first_example["value"]
@@ -362,7 +362,7 @@ class Service:
                 if flat_dict:
                     return self._schema_to_string(flat_dict, is_array)
 
-        # 2b. OpenAPI 3.0 — example (singolare)
+        # 2b. OpenAPI 3.0 — example (singular)
         if "example" in json_content and json_content["example"] is not None:
             ex_val    = json_content["example"]
             is_array  = isinstance(ex_val, list)
@@ -370,7 +370,7 @@ class Service:
             if flat_dict:
                 return self._schema_to_string(flat_dict, is_array)
 
-        # 2c. Swagger 2.0 — esempio JSON esplicito
+        # 2c. Swagger 2.0 — explicit JSON example
         if swagger2_json_ex is not None:
             is_array  = isinstance(swagger2_json_ex, list)
             flat_dict = self._flatten_dotted_from_example(swagger2_json_ex)
@@ -381,30 +381,29 @@ class Service:
 
     def _extract_request_schema_from_details(self, details, method):
         """
-        Estrae lo schema del body di input per POST e PUT.
-        GET e DELETE non hanno body → restituisce None direttamente.
+        Extract the input body schema for POST and PUT.
+        GET and DELETE have no body → return None immediately.
 
-        I campi required sono marcati con * nel formato output,
-        così l'LLM sa quali campi deve obbligatoriamente includere
-        nel body della richiesta.
+        Required fields are marked with * in the output format,
+        so the LLM knows which fields it must include in the request body.
 
         Output: "{location:str*, fillLevel:int*, binType:enum*, status:enum*}"
-                (i campi senza * sono opzionali)
+                (fields without * are optional)
         """
-        # POST, PUT e PATCH hanno un request body
+        # POST, PUT and PATCH have a request body
         if method.upper() not in {"POST", "PUT", "PATCH"}:
             return None
 
         schema = None
 
-        # OpenAPI 3.0: lo schema sta in requestBody.content.application/json.schema
+        # OpenAPI 3.0: the schema lives in requestBody.content.application/json.schema
         request_body = details.get("requestBody", {})
         if isinstance(request_body, dict):
             content      = request_body.get("content", {})
             json_content = content.get("application/json", {})
             schema       = json_content.get("schema")
 
-        # Swagger 2.0: lo schema sta in parameters[in=body].schema
+        # Swagger 2.0: the schema is in parameters[in=body].schema
         if not schema:
             for param in details.get("parameters", []):
                 if isinstance(param, dict) and param.get("in") == "body":
@@ -414,18 +413,18 @@ class Service:
         if not schema or not isinstance(schema, dict):
             return None
 
-        # raccoglie i campi required (gestisce anche allOf ricorsivamente)
+        # collect the required fields (also handles allOf recursively)
         required_fields = self._collect_required_fields(schema)
 
         flat_dict = self._flatten_dotted(schema)
         if not flat_dict:
             return None
 
-        # serializza aggiungendo * sui campi required
+        # serialize, adding * to required fields
         parts = []
         for key, type_label in flat_dict.items():
-            # per dotted keys (es. "address.street"), controlla solo la parte root
-            # perché il required è dichiarato al livello dell'oggetto padre
+            # for dotted keys (e.g. "address.street"), check only the root part
+            # because required is declared at the parent object level
             root_field = key.split(".")[0]
             marker = "*" if root_field in required_fields else ""
             parts.append(f"{key}:{type_label}{marker}")
@@ -435,8 +434,8 @@ class Service:
 
     def _extract_parameters_from_details(self, details):
         """
-        Estrae query parameter e path parameter da un endpoint.
-        Ritorna una stringa compatta, es: "{zoneId:str*, status:enum}"
+        Extract query parameters and path parameters from an endpoint.
+        Returns a compact string, e.g. "{zoneId:str*, status:enum}"
         """
         params = details.get("parameters", [])
         if not params:
@@ -449,14 +448,14 @@ class Service:
                 is_required = p.get("required", False)
                 schema = p.get("schema", {})
                 
-                # Usa lo stesso _map_type che usi per il resto
+                # Use the same _map_type used elsewhere
                 param_type  = self._map_type(schema)
                 marker      = "*" if is_required or p.get("in") == "path" else ""
 
-                # Include i valori enum in formato compatto: enum(v1,v2,v3)
-                # Risparmia token rispetto a descrivere i valori in prosa,
-                # ed evita che l'LLM inventi varianti (es: airQuality vs air_quality)
-                # Cap a 8 valori per non gonfiare il prompt su enum molto grandi
+                # Include enum values in compact form: enum(v1,v2,v3)
+                # Saves tokens compared with describing the values in prose,
+                # and prevents the LLM from inventing variants (e.g. airQuality vs air_quality)
+                # Cap at 8 values to avoid bloating the prompt for very large enums
                 enum_values = schema.get("enum")
                 if enum_values and isinstance(enum_values, list) and len(enum_values) <= 8:
                     type_label = "enum(" + ",".join(str(v) for v in enum_values) + ")"
@@ -468,26 +467,26 @@ class Service:
         if not extracted:
             return None
 
-        # Formatta come JSON-like compatto (TOON)
+        # Format as compact JSON-like text (TOON)
         inner = ", ".join(f"{k}:{v}" for k, v in extracted.items())
         return f"{{{inner}}}"
 
     def _build_swagger_url_from_endpoint(self, endpoint_url, mock_server_url):
         """
-        Ricostruisce l'URL dello YAML Microcks a partire da un endpoint
-        già salvato in MongoDB.
+        Reconstruct the Microcks YAML URL from an endpoint already stored in
+        MongoDB.
 
-        Serve come fallback quando swagger_url non è stato salvato direttamente
-        (es. servizi registrati prima che venisse aggiunto il campo swagger_url).
+        Serves as a fallback when swagger_url was not stored directly
+        (e.g. services registered before the swagger_url field was added).
 
-        Esempio di trasformazione:
+        Example transformation:
           input:  "http://localhost:8585/rest/Smart+Bins+API/1.0/bin"
           output: "http://mock-server:8080/api/resources/Smart%20Bins%20API-1.0.yaml"
 
-        Il mock server Microcks espone gli YAML originali sotto /api/resources/
-        con il formato: {NomeAPI}-{versione}.yaml (spazi codificati come %20)
+        The Microcks mock server exposes the original YAMLs under /api/resources/
+        using the format: {APIName}-{version}.yaml (spaces encoded as %20)
         """
-        # estrae la parte dopo /rest/
+        # extract the part after /rest/
         match = re.search(r"/rest/(.+)", endpoint_url)
         if not match:
             return None
@@ -507,20 +506,20 @@ class Service:
 
     def _generate_description(self, swagger: dict) -> str:
         """
-        Genera una description sintetica per l'indexing Stage 1 del retrieval.
+        Generate a concise description for Stage 1 retrieval indexing.
 
-        Costruita da:
-          - Titolo dell'API (ancora semantica)
-          - Summary di ogni endpoint (testo funzionale, più denso della description)
-          - Valori enum dei parametri (vocabolario di dominio esatto)
+        Built from:
+          - API title (semantic anchor)
+          - Summary of each endpoint (functional text, denser than description)
+          - Parameter enum values (exact domain vocabulary)
 
-        La description originale (info.description) è spesso astratta e ha
-        overlap lessicale basso con le query utente. I summary e gli enum
-        contengono invece i termini usati nelle query: "Find best available
-        parking", "spotType: standard, electric, disabled", ecc.
+        The original description (info.description) is often abstract and has
+        low lexical overlap with user queries. Summaries and enums instead
+        contain the terms used in queries: "Find best available parking",
+        "spotType: standard, electric, disabled", etc.
 
-        Viene salvata nel campo generated_description (separato da description)
-        e usata esclusivamente per l'indexing in Qdrant, non inviata all'LLM.
+        Stored in the generated_description field (separate from description)
+        and used exclusively for Qdrant indexing; it is not sent to the LLM.
         """
         info  = swagger.get("info", {})
         paths = swagger.get("paths", {})
@@ -571,7 +570,7 @@ class Service:
         try:
             # --- FIX UTF-8 ---
             resp = requests.get(swagger_url)
-            resp.encoding = 'utf-8'  # Forza la decodifica dei caratteri speciali (come "—")
+            resp.encoding = 'utf-8'  # Force decoding of special characters (e.g. "—")
             parser = prance.ResolvingParser(spec_string=resp.text, lazy=False, strict=False)
             # -----------------
             swagger = parser.specification
@@ -607,8 +606,8 @@ class Service:
                 if params_schema:
                     parameters[key] = params_schema
 
-        # Genera la description arricchita dallo stesso swagger già parsato.
-        # Nessun secondo download — usa parser.specification già in memoria.
+        # Build the enriched description from the same swagger already parsed.
+        # No second download — uses the in-memory parser.specification.
         generated_description = self._generate_description(swagger)
 
         return {
@@ -618,21 +617,21 @@ class Service:
             "generated_description": generated_description,
         }
     # -----------------------------------------------------------------------
-    # Metodo principale di enrichment
+    # Main enrichment method
     # -----------------------------------------------------------------------
 
     def enrich_schemas(self, mock_server_url=None, service_id=None):
         """
-        Punto di ingresso dell'enrichment: chiamato da mock-deployer dopo
-        il deploy dei servizi tramite POST /api/importer/enrich.
+        Enrichment entry point: called by mock-deployer after service
+        deployment via POST /api/importer/enrich.
 
-        Flusso:
-          1. Recupera tutti i servizi da MongoDB via catalog-gateway
-          2. Per ognuno, trova l'URL dello YAML (da swagger_url o ricostruendolo)
-          3. Estrae gli schema con _extract_schemas_from_yaml
-          4. Salva in MongoDB via PATCH /services/{id}/schemas
+        Flow:
+          1. Fetch all services from MongoDB through catalog-gateway
+          2. For each one, find the YAML URL (from swagger_url or by rebuilding it)
+          3. Extract schemas with _extract_schemas_from_yaml
+          4. Save them to MongoDB via PATCH /services/{id}/schemas
 
-        service_id opzionale: se specificato, arricchisce solo quel servizio.
+        Optional service_id: when specified, enrich only that service.
         """
         mock_server_url = mock_server_url or self.MOCK_SERVER_URL
         gateway_base    = f"http://{self.GATEWAY_HOST}:{self.GATEWAY_PORT}"
@@ -645,7 +644,7 @@ class Service:
             print(f"[ENRICH] Cannot fetch services from gateway: {e}")
             return {"enriched": 0, "skipped": 0, "errors": 1}
 
-        # filtro opzionale per singolo servizio
+        # optional filter for a single service
         if service_id:
             all_services = [s for s in all_services if s.get("_id") == service_id]
 
@@ -656,16 +655,16 @@ class Service:
         for svc in all_services:
             doc_id = svc.get("_id")
 
-            # skip idempotente: non rielabora servizi già arricchiti
-            # (evita di sovrascrivere schema corretti con una riesecuzione)
+            # idempotent skip: do not reprocess services already enriched
+            # (avoids overwriting correct schemas on a re-run)
             if ("response_schemas" in svc and "request_schemas" in svc
                     and "parameters" in svc and "generated_description" in svc):
                 print(f"[ENRICH] Skipping {doc_id} (already enriched)")
                 skipped += 1
                 continue
 
-            # trova l'URL dello YAML: prima cerca il campo diretto in MongoDB,
-            # poi tenta la ricostruzione dall'endpoint come fallback
+            # find the YAML URL: first look for the direct field in MongoDB,
+            # then try to reconstruct it from the endpoint as a fallback
             swagger_url = svc.get("swagger_url")
 
             if not swagger_url:
@@ -680,12 +679,12 @@ class Service:
                 skipped += 1
                 continue
 
-            # estrae response_schemas e request_schemas dallo YAML
+            # extracts response_schemas and request_schemas from the YAML
             schemas = self._extract_schemas_from_yaml(swagger_url)
 
             try:
-                # aggiorna il documento MongoDB con gli schema estratti
-                # PATCH invece di PUT: aggiunge i campi senza sovrascrivere il resto
+                # update the MongoDB document with the extracted schemas
+                # PATCH instead of PUT: adds fields without overwriting the rest
                 patch_resp = requests.patch(
                     f"{gateway_base}/services/{doc_id}/schemas",
                     json=schemas,
@@ -705,27 +704,27 @@ class Service:
         return {"enriched": enriched, "skipped": skipped, "errors": errors}
 
     # -----------------------------------------------------------------------
-    # Metodi originali di registrazione
-    # Usati da import_apis() per i servizi esterni da apis.guru
-    # parse_swagger è analogo a _extract_schemas_from_yaml ma include
-    # anche capabilities, endpoints e swagger_url nel payload di ritorno
+    # Original registration methods
+    # Used by import_apis() for external services from apis.guru
+    # parse_swagger is similar to _extract_schemas_from_yaml but also includes
+    # capabilities, endpoints and swagger_url in the returned payload
     # -----------------------------------------------------------------------
 
     def parse_swagger(self, service, swagger_url, fallback_base_url=None):
         """
-        Analizza uno YAML OpenAPI e costruisce il documento completo
-        da salvare in MongoDB per un servizio.
+        Parse an OpenAPI YAML and build the complete document to store in
+        MongoDB for a service.
 
-        A differenza di _extract_schemas_from_yaml (che estrae solo gli schema),
-        questo metodo estrae anche:
-          - capabilities: descrizioni testuali degli endpoint (usate da Qdrant)
-          - endpoints: URL completi degli endpoint
-          - swagger_url: URL dello YAML (per futuri re-enrichment)
+        Unlike _extract_schemas_from_yaml (which extracts only schemas),
+        this method also extracts:
+          - capabilities: textual endpoint descriptions (used by Qdrant)
+          - endpoints: full endpoint URLs
+          - swagger_url: YAML URL (for future re-enrichment)
         """
         try:
-            # --- FIX UTF-8 ---
-            # /import/file passa un URL file://: requests non supporta lo
-            # schema file, quindi leggiamo direttamente dal filesystem.
+            # --- UTF-8 FIX ---
+            # /import/file passes a file:// URL: requests does not support the
+            # file scheme, so read directly from the filesystem.
             if swagger_url.startswith("file://"):
                 with open(swagger_url[len("file://"):], "r", encoding="utf-8") as fh:
                     spec_text = fh.read()
@@ -750,7 +749,7 @@ class Service:
             paths        = swagger.get("paths", {})
             servers      = swagger.get("servers")
 
-            # --- LOGICA ORIGINALE ---
+            # --- ORIGINAL LOGIC ---
             if servers and isinstance(servers, list) and len(servers) > 0 and isinstance(servers[0], dict):
                 host_url = servers[0].get("url", "http://localhost")
             else:
@@ -760,13 +759,13 @@ class Service:
                 scheme    = schemes[0] if isinstance(schemes, list) and schemes else "http"
                 host_url  = f"{scheme}://{host}{base_path}"
 
-            # --- NUOVA LOGICA DI FALLBACK (LA MAGIA) ---
-            # Se dopo i controlli standard siamo ancora bloccati su localhost...
+            # --- NEW FALLBACK LOGIC ---
+            # If the standard checks still leave us stuck on localhost...
             if host_url.startswith("http://localhost"):
-                # 1. Priorità al parametro manuale (se fornito)
+                # 1. Prefer the manual parameter (if provided)
                 if fallback_base_url:
                     host_url = fallback_base_url.rstrip('/')
-                # 2. Altrimenti deducilo dall'URL di download (se è un link remoto)
+                # 2. Otherwise infer it from the download URL (if it is a remote link)
                 elif swagger_url.startswith("http"):
                     parsed = urlparse(swagger_url)
                     host_url = f"{parsed.scheme}://{parsed.netloc}"
@@ -779,7 +778,7 @@ class Service:
         endpoints        = {}
         response_schemas = {}
         request_schemas  = {}
-        parameters       = {} # <--- NUOVO DIZIONARIO
+        parameters       = {} # <--- NEW DICTIONARY
 
         for path, methods in paths.items():
             if not isinstance(methods, dict):
@@ -805,12 +804,12 @@ class Service:
                 if req_schema:
                     request_schemas[key] = req_schema
 
-                # --- NUOVA CHIAMATA PER I PARAMETRI ---
+                # --- NEW CALL FOR PARAMETERS ---
                 params_schema = self._extract_parameters_from_details(details)
                 if params_schema:
                     parameters[key] = params_schema
 
-        # restituisce il documento completo pronto per MongoDB
+        # return the complete document ready for MongoDB
         return {
             "id":                    service,
             "name":                  service_name,
@@ -825,8 +824,8 @@ class Service:
         }
 
     def register_to_redis(self, service_name, service_status):
-        # registra lo stato di health del servizio in Redis
-        # usato dall'healthcheck-service per sapere se il servizio è attivo
+        # record the service health status in Redis
+        # used by healthcheck-service to know whether the service is up
         headers      = {"Content-Type": "application/json"}
         json_payload = {"key": service_name, "value": service_status}
         response = requests.post(
@@ -840,9 +839,9 @@ class Service:
             print(f"Failed to register {service_name} to Redis: HTTP {response.status_code}")
 
     def register_to_consul(self, service_id, service_name):
-        # registra il servizio in Consul con un health check automatico
-        # Consul usa questo per sapere se il servizio è raggiungibile
-        # e per escluderlo dal catalogo se non risponde
+        # register the service in Consul with an automatic health check
+        # Consul uses it to know whether the service is reachable
+        # and to exclude it from the catalog when it does not respond
         payload = {
             "Name": service_name,
             "Id":   service_id,
@@ -851,9 +850,9 @@ class Service:
                 "TlsSkipVerify":                 True,
                 "Method":                         "GET",
                 "Http":                           f"http://{self.HEALTHCHECK_SERVICE_HOST}:{self.HEALTHCHECK_SERVICE_PORT}/status/{service_id}",
-                "Interval":                       "10s",   # controlla ogni 10 secondi
+                "Interval":                       "10s",   # checks every 10 seconds
                 "Timeout":                        "5s",
-                "DeregisterCriticalServiceAfter": "30s"    # rimuove se non risponde per 30s
+                "DeregisterCriticalServiceAfter": "30s"    # removes if it does not respond for 30s
             }
         }
         try:
@@ -880,10 +879,10 @@ class Service:
         service_id = catalog_payload.get("id", "UNKNOWN")
         post_url = f"http://{self.GATEWAY_HOST}:{self.GATEWAY_PORT}/service"
 
-        # Il gateway calcola un embedding per OGNI capability su CPU: i servizi
-        # apis.guru con molti endpoint possono richiedere ben più di 15s. Timeout
-        # generoso e configurabile per evitare falsi [MONGO][FAILED] (il dato in
-        # realtà arriva, ma il client mollava troppo presto).
+        # The gateway computes an embedding for EVERY capability on CPU: apis.guru
+        # services with many endpoints can take well over 15s. Generous,
+        # configurable timeout to avoid false [MONGO][FAILED] (the data actually
+        # arrives, but the client used to give up too early).
         mongo_timeout = int(os.environ.get("MONGO_REGISTER_TIMEOUT", "180"))
         try:
             print(f"[MONGO][ATTEMPT] POST {post_url} id={service_id}")
@@ -907,32 +906,32 @@ class Service:
 
     def import_apis(self, limit=None, seed=42, offset=0):
         """
-        Importa i servizi pubblici da apis.guru.
-        Per ogni provider: scarica lo YAML, estrae capabilities/endpoints/schema,
-        poi registra in parallelo su Redis, Consul e MongoDB.
+        Import public services from apis.guru.
+        For each provider: download the YAML, extract capabilities/endpoints/schemas,
+        then register in parallel in Redis, Consul and MongoDB.
 
-        Usato per arricchire il catalogo con servizi reali esterni
-        (non i mock Smart City locali).
+        Used to enrich the catalog with real external services
+        (not the local Smart City mocks).
 
-        Parametri (per il test di robustezza della discovery):
-            limit:  indice di fine del campione (esclusivo). None = tutti.
-            seed:   seme per il mescolamento deterministico. A parità di seme,
-                    i sottoinsiemi sono NIDIFICATI (limit=50 ⊂ limit=100 ⊂ ...),
-                    così la curva a gradini aggiunge solo distrattori nuovi.
-            offset: indice di inizio del campione. Permette di importare SOLO
-                    la fetta nuova [offset:limit] a ogni gradino, evitando di
-                    ri-scaricare e ri-registrare i provider già presenti.
+        Parameters (for the discovery robustness test):
+            limit:  exclusive end index of the sample. None = all.
+            seed:   seed for deterministic shuffling. With the same seed,
+                    subsets are NESTED (limit=50 ⊂ limit=100 ⊂ ...),
+                    so the step curve only adds new distractors.
+            offset: start index of the sample. Allows importing ONLY
+                    the new slice [offset:limit] at each step, avoiding
+                    re-downloading and re-registering providers already present.
         """
         all_endpoints = {}
         providers     = self.fetch_providers()
         print(f"Found {len(providers)} providers.")
 
-        # Campionamento riproducibile e nidificato per la curva a gradini.
-        # sorted() rende stabile l'ordine di partenza a prescindere dall'ordine
-        # restituito da apis.guru; lo shuffle con seme fisso dà diversità di
-        # dominio (evita di prendere solo i provider 'a.../b...').
-        # rank_map: provider -> sample_rank assoluto nell'ordine deterministico.
-        # Serve a taggare ogni distrattore per il filtro max_rank del gateway.
+        # Reproducible, nested sampling for the step curve.
+        # sorted() makes the starting order stable regardless of the order
+        # returned by apis.guru; shuffling with a fixed seed provides domain
+        # diversity (avoids picking only 'a.../b...' providers).
+        # rank_map: provider -> absolute sample_rank in the deterministic order.
+        # It is used to tag each distractor for the gateway's max_rank filter.
         rank_map = {}
         if limit is not None or offset:
             providers = sorted(providers)
@@ -940,7 +939,7 @@ class Service:
             start = max(0, int(offset))
             end   = max(start, int(limit)) if limit is not None else len(providers)
             providers = providers[start:end]
-            # L'elemento in posizione i della fetta ha rank assoluto start+i.
+            # The element at position i of the slice has absolute rank start+i.
             rank_map = {p: start + i for i, p in enumerate(providers)}
             print(f"Importing providers [{start}:{end}] → {len(providers)} (seed={seed}).")
 
@@ -963,12 +962,12 @@ class Service:
                 print(f"[SKIP] {service}: error parsing swagger.")
                 continue
 
-            # Tagga il distrattore con il suo rank deterministico (se disponibile).
+            # Tag the distractor with its deterministic rank (when available).
             if service in rank_map:
                 openapi["sample_rank"] = rank_map[service]
 
-            # le tre registrazioni avvengono in parallelo con ThreadPoolExecutor
-            # poi si aspetta che tutte finiscano prima di procedere (BARRIER)
+            # the three registrations run in parallel with ThreadPoolExecutor
+            # then wait for all of them to finish before proceeding (BARRIER)
             with ThreadPoolExecutor(max_workers=3) as executor:
                 futures = [
                     executor.submit(self.register_to_redis, service, "true"),
@@ -976,7 +975,7 @@ class Service:
                     executor.submit(self.register_to_mongo, openapi)
                 ]
 
-                # BARRIER: aspetta tutti i thread prima di andare al prossimo servizio
+                # BARRIER: wait for all threads before moving to the next service
                 for future in futures:
                     try:
                         future.result()
@@ -985,15 +984,15 @@ class Service:
 
     def backfill_ranks(self, seed=42):
         """
-        Assegna sample_rank ai distrattori GIÀ presenti in catalogo, senza
-        riscaricare nulla da apis.guru.
+        Assign sample_rank to distractors ALREADY present in the catalog,
+        without re-downloading anything from apis.guru.
 
-        Ricalcola lo stesso ordine deterministico di import_apis (provider
-        ordinati + shuffle con seed), poi per ogni provider già presente in
-        catalogo chiama PATCH /services/<id>/rank sul gateway (aggiorna Mongo +
-        payload Stage 1 senza ri-embedding).
+        Recomputes the same deterministic order as import_apis (sorted
+        providers + seeded shuffle), then for each provider already present in
+        the catalog calls PATCH /services/<id>/rank on the gateway (updates Mongo +
+        the Stage 1 payload without re-embedding).
 
-        Ritorna {"tagged": n, "present": m, "errors": e}.
+        Returns {"tagged": n, "present": m, "errors": e}.
         """
         gateway_base = f"http://{self.GATEWAY_HOST}:{self.GATEWAY_PORT}"
 
@@ -1001,7 +1000,7 @@ class Service:
         random.Random(seed).shuffle(providers)
         rank_map = {p: i for i, p in enumerate(providers)}
 
-        # ID dei servizi attualmente in catalogo
+        # IDs of the services currently in the catalog
         try:
             resp = requests.get(f"{gateway_base}/services", timeout=30)
             resp.raise_for_status()
@@ -1013,7 +1012,7 @@ class Service:
         tagged = errors = 0
         for sid in present_ids:
             if sid not in rank_map:
-                continue  # non è un distrattore apis.guru (es. mock smart-city)
+                continue  # not an apis.guru distractor (e.g. smart-city mock)
             try:
                 r = requests.patch(
                     f"{gateway_base}/services/{sid}/rank",
@@ -1031,26 +1030,27 @@ class Service:
 
     def register_existing_to_registry(self):
         """
-        Ri-registra in Consul + Redis tutti i servizi GIÀ in catalogo (Mongo) che
-        non risultano nel registry, SENZA riscaricare/parsare nulla.
+        Re-register in Consul + Redis all services ALREADY in the catalog (Mongo)
+        that are missing from the registry, WITHOUT re-downloading or parsing
+        anything.
 
-        Serve quando i servizi sono stati caricati via /import/file (come i 275
-        SOCBench-D) ma non sono in Consul: in quel caso la control-unit li
-        scarterebbe come 'orphaned' e l'end-to-end non vedrebbe i servizi.
+        Needed when services were loaded via /import/file (such as the 275
+        SOCBench-D services) but are not in Consul: in that case the control
+        unit would discard them as 'orphaned' and the end-to-end pipeline would
+        not see them.
 
-        NOTA: a differenza di prima, questo metodo NON filtra su sample_rank,
-        perché i servizi SOCBench-D non hanno questo campo. Vengono registrati
-        tutti i servizi non già presenti in Consul.
+        NOTE: unlike before, this method does NOT filter on sample_rank,
+        because SOCBench-D services do not have that field. All services not
+        already present in Consul are registered.
 
-        Il health check è dirottato su GET /health del catalog-gateway (che
-        risponde sempre 200) invece di /status/{service_id} del
-        healthcheck-service, che richiede che il servizio sia stato registrato
-        in Redis con valore "true". Questo evita che i servizi vengano
-        marcati come critici da Consul solo perché il mock server non è
-        raggiungibile o perché il servizio non è stato ancora registrato in
-        Redis.
+        The health check is redirected to GET /health of the catalog-gateway
+        (which always returns 200) instead of /status/{service_id} of the
+        healthcheck-service, which requires the service to be registered in
+        Redis with value "true". This prevents Consul from marking services as
+        critical only because the mock server is unreachable or because the
+        service has not yet been registered in Redis.
 
-        Ritorna {"registered": n, "skipped": m, "errors": e}.
+        Returns {"registered": n, "skipped": m, "errors": e}.
         """
         gateway_base = f"http://{self.GATEWAY_HOST}:{self.GATEWAY_PORT}"
 
@@ -1062,7 +1062,7 @@ class Service:
             print(f"[REGISTER] Cannot fetch services: {e}")
             return {"registered": 0, "skipped": 0, "errors": 1}
 
-        # ID già presenti in Consul (per non duplicare)
+        # IDs already present in Consul (to avoid duplicates)
         try:
             c = requests.get(
                 f"http://{self.CONSUL_HOST}:{self.CONSUL_PORT}/v1/agent/services",
@@ -1077,13 +1077,13 @@ class Service:
         registered = skipped = errors = 0
         for s in services:
             sid = s.get("_id")
-            # Registra TUTTI i servizi non già in Consul (non solo i distrattori)
+            # Register ALL services not already in Consul (not only distractors)
             if not sid or sid in consul_ids:
                 skipped += 1
                 continue
             try:
                 self.register_to_redis(sid, "true")
-                # Health check su endpoint "fantoccio" che risponde sempre 200
+                # Health check against a "dummy" endpoint that always returns 200
                 self.register_to_consul_with_dummy_healthcheck(sid, s.get("name", sid))
                 registered += 1
             except Exception as e:
@@ -1095,15 +1095,15 @@ class Service:
 
     def register_to_consul_with_dummy_healthcheck(self, service_id, service_name):
         """
-        Registra il servizio in Consul con un health check che punta a un
-        endpoint "fantoccio" (GET /health del catalog-gateway) che risponde
-        sempre 200, invece di /status/{service_id} del healthcheck-service che
-        richiede che il servizio sia stato registrato in Redis con valore
+        Register the service in Consul with a health check pointing to a
+        "dummy" endpoint (GET /health of the catalog-gateway) that always
+        returns 200, instead of /status/{service_id} of the healthcheck-service,
+        which requires the service to be registered in Redis with value
         "true".
 
-        Questo evita che i servizi vengano marcati come critici da Consul
-        solo perché il mock server non è raggiungibile o perché il servizio
-        non è stato ancora registrato in Redis.
+        This prevents Consul from marking services as critical only because
+        the mock server is unreachable or because the service has not yet been
+        registered in Redis.
         """
         payload = {
             "Name": service_name,

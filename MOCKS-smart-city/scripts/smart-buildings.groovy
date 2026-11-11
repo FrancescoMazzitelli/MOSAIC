@@ -161,7 +161,7 @@ try {
 }
 
 if (responseMap.status == "success") {
-    return "ok"  // Restituisce il nome dell'esempio di successo nel YAML
+    return "ok"  // Returns the name of the success example in the YAML
 } else {
-    return "fail" // Restituisce il nome dell'esempio di errore nel YAML
+    return "fail" // Returns the name of the failure example in the YAML
 }

@@ -180,7 +180,7 @@ def extract_response_row(record: dict[str, str],
     except (TypeError, ValueError):
         planner_tasks_count = None
     if planner_tasks_count is None and tasks_after_count is not None:
-        # Compatibilità con il control unit non strumentato.
+        # Compatibility with the non-instrumented control unit.
         planner_tasks_count = tasks_after_count
 
     raw_validated_count = data.get("validated_tasks_count")
@@ -295,11 +295,11 @@ def main() -> int:
             catalog_ids = catalog_service_ids(catalog_payload)
             catalog_ops = catalog_op_keys(catalog_payload)
         except Exception as exc:
-            print(f"[WARN] Catalogo non leggibile ({catalog_path}): {exc}", file=sys.stderr)
+            print(f"[WARN] Cannot read catalog ({catalog_path}): {exc}", file=sys.stderr)
     else:
         print(
-            f"[WARN] Nessuno snapshot catalogo in {catalog_path}; "
-            "HC-1 e reuse saranno calcolati solo sui servizi scoperti.",
+            f"[WARN] No catalog snapshot at {catalog_path}; "
+            "HC-1 and reuse will be computed only on the discovered services.",
             file=sys.stderr,
         )
 
@@ -310,8 +310,8 @@ def main() -> int:
     }
     if not args.limit and any(count != 15 for count in diag_counts.values()):
         print(
-            f"[WARN] Bilanciamento inatteso nel set diagnostico: {diag_counts}. "
-            "Il setup previsto è 15/15/15.",
+            f"[WARN] Unexpected balance in the diagnostic set: {diag_counts}. "
+            "The expected setup is 15/15/15.",
             file=sys.stderr,
         )
     if any(
@@ -319,8 +319,8 @@ def main() -> int:
         for row in records
     ) and not args.allow_proposed:
         print(
-            "[WARN] Le query diagnostiche non risultano ancora adjudicated. "
-            "Eseguo comunque; usa --allow-proposed per silenziare questo avviso.",
+            "[WARN] The diagnostic queries are not yet adjudicated. "
+            "Running anyway; use --allow-proposed to silence this warning.",
             file=sys.stderr,
         )
 
@@ -394,10 +394,10 @@ def main() -> int:
     manifest["instrumented_server"] = instrumented_server
     dump_json(out_dir / "run_manifest.json", manifest)
 
-    print(f"\nRisultati scritti in: {out_dir}")
+    print(f"\nResults written to: {out_dir}")
     print(f"  raw:       {raw_path}")
     print(f"  per-query: {out_dir / 'per_query.csv'}")
-    print("\nAnalisi:")
+    print("\nAnalysis:")
     print(
         f"  python {Path(__file__).name} --help\n"
         f"  python {HERE / 'analyze_designer_eval.py'} --run-dir {out_dir}"

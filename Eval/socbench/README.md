@@ -81,46 +81,47 @@ The reranker is always `BAAI/bge-reranker-base` (MOSAIC's stage 2).
 
 ## Run
 
-### Unico script automatico (raccomandato)
+### Single automated script (recommended)
 
-`run.sh` esegue tutto in sequenza: avvio stack, import servizi, Consul,
-reindicizzazione Stage 1, benchmark (solo MOSAIC) e tabella LaTeX.
+`run.sh` runs everything in sequence: start the stack, import services, register
+in Consul, reindex Stage 1, run the benchmark (MOSAIC only) and build the LaTeX
+table.
 
 ```bash
 cd Eval/socbench
 
-# full run (~10 minuti + tempo di import/reindex)
+# full run (~10 minutes + import/reindex time)
 ./run.sh
 
-# smoke test: 1 dominio, 10 query
+# smoke test: 1 domain, 10 queries
 ./run.sh --max-cases 1 --tag smoke
 
-# stack già avviato e servizi già registrati
+# stack already started and services already registered
 ./run.sh --skip-stack --skip-register
 
-# seconda riga con l'embedder di produzione MOSAIC
+# second row with MOSAIC's production embedder
 ./run.sh --embedder qwen --tag qwen
 ```
 
-I baseline (BGE / OpenAI / NVIDIA, 8 chunking strategy) **non vengono ricalcolati**:
-sono già riportati nel paper e hardcoded in `make_table.py`. Questo script misura
-solo la riga MOSAIC.
+The baselines (BGE / OpenAI / NVIDIA, 8 chunking strategies) are **not
+recomputed**: they are already reported in the paper and hardcoded in
+`make_table.py`. This script measures only the MOSAIC row.
 
-Flag:
-- `--skip-stack`   stack Docker già avviato
-- `--skip-register` servizi già in Mongo/Qdrant (Consul e reindex vengono comunque eseguiti)
-- `--max-cases N`  solo i primi N domini (smoke test)
-- `--tag NAME`     prefisso file di output
-- `--embedder x`   `bge` (default, paragonabile al blocco BGE) o `qwen` (Qwen3-Embedding-0.6B, l'embedder di produzione MOSAIC)
-- `--k 5 10 20`    valori di k (default)
+Flags:
+- `--skip-stack`    Docker stack already started
+- `--skip-register` services already in Mongo/Qdrant (Consul and reindex still run)
+- `--max-cases N`   only the first N domains (smoke test)
+- `--tag NAME`      output file prefix
+- `--embedder x`    `bge` (default, comparable to the BGE block) or `qwen` (Qwen3-Embedding-0.6B, MOSAIC's production embedder)
+- `--k 5 10 20`     k values (default)
 
-### Singoli passi
+### Individual steps
 
 ```bash
-# solo benchmark (stack già avviato e servizi già registrati + reindicizzati)
+# benchmark only (stack already started and services already registered + reindexed)
 python eval_gateway.py --tag gateway
 
-# solo tabella LaTeX
+# LaTeX table only
 python make_table.py
 ```
 

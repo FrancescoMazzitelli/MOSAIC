@@ -161,7 +161,7 @@ try {
 }
 
 if (responseMap.status == "success") {
-    return "ok"  // Restituisce la stringa che punta all'esempio 'ok' nel YAML
+    return "ok"  // Returns the string pointing to the 'ok' example in the YAML
 } else {
-    return "fail" // Restituisce la stringa che punta all'esempio 'fail' nel YAML
+    return "fail" // Returns the string pointing to the 'fail' example in the YAML
 }

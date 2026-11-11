@@ -40,10 +40,10 @@ public class StatusResource {
     }
 
     /**
-     * Endpoint "fantoccio" che risponde sempre 200.
-     * Usato come health check per i servizi SOCBench-D registrati in Consul
-     * senza un mock server raggiungibile: evita che Consul li marchi come
-     * critici e la control-unit li scarti come 'orphaned'.
+     * "Dummy" endpoint that always returns 200.
+     * Used as a health check for SOCBench-D services registered in Consul
+     * without a reachable mock server: it prevents Consul from marking them
+     * as critical and the control-unit from discarding them as 'orphaned'.
      */
     @GET
     @Path("/ok")

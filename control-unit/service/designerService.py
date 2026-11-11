@@ -2,23 +2,23 @@
 designerService.py
 ==================
 
-Triage + API Designer fallback in UNA sola chiamata LLM.
+Triage + API Designer fallback in a SINGLE LLM call.
 
-Quando il planner principale produce un piano vuoto (tasks=[]), il Controller
-delega a questa classe una SECONDA chiamata LLM che fa due cose in un colpo:
+When the main planner produces an empty plan (tasks=[]), the Controller
+delegates to this class a SECOND LLM call that does two things at once:
 
-  1) CLASSIFICA il motivo del piano vuoto scegliendo una categoria da un
-     enum chiuso (OUT_OF_DOMAIN / AMBIGUOUS / INVALID / UNKNOWN).
-  2) SE e solo se la categoria e' OUT_OF_DOMAIN, progetta anche un
-     contratto REST concettuale che coprirebbe il gap; altrimenti
-     il campo service_contract viene lasciato a null.
+  1) CLASSIFIES the reason for the empty plan by choosing a category from a
+     closed enum (OUT_OF_DOMAIN / AMBIGUOUS / INVALID / UNKNOWN).
+  2) IF and only if the category is OUT_OF_DOMAIN, it also designs a
+     conceptual REST contract that would cover the gap; otherwise
+     the service_contract field is left as null.
 
-Il guided decoding di Ollama garantisce, tramite anyOf(null | contract),
-che il modello non possa produrre un contratto vuoto/malformato quando
-non serve, e che quando serve abbia tutti i campi richiesti.
+Ollama's guided decoding guarantees, via anyOf(null | contract),
+that the model cannot produce an empty/malformed contract when
+not needed, and that when needed it has all the required fields.
 
-La classe e' stateless (nessun effetto collaterale, solo chiamate HTTP a
-Ollama) e dipende solo da 'requests' + stdlib.
+The class is stateless (no side effects, only HTTP calls to
+Ollama) and depends only on 'requests' + stdlib.
 """
 
 import json
@@ -31,9 +31,9 @@ import requests
 
 class Designer:
     """
-    Triage + designer. Metodo pubblico unico: analyze().
+    Triage + designer. Single public method: analyze().
 
-    Uso tipico dal Controller:
+    Typical use from the Controller:
 
         designer = Designer(fallback_model=controller.model_name)
         result = designer.analyze(
@@ -46,9 +46,9 @@ class Designer:
         # result == {
         #   "category":         "OUT_OF_DOMAIN" | "AMBIGUOUS" | "INVALID" | "UNKNOWN",
         #   "justification":    str,
-        #   "service_contract": dict | None,   # popolato solo se OUT_OF_DOMAIN
+        #   "service_contract": dict | None,   # populated only if OUT_OF_DOMAIN
         # }
-        # In caso di errore/JSON invalido: result == {} (dict vuoto).
+        # On error/invalid JSON: result == {} (empty dict).
     """
 
     # ------------------------------------------------------------------
@@ -57,8 +57,8 @@ class Designer:
 
     def __init__(self, fallback_model: str = "glm-4.7-flash:q4_K_M"):
         """
-        fallback_model:  modello da usare se la env DESIGNER_LLM_MODEL
-                         non e' settata. 
+        fallback_model:  model to use if the DESIGNER_LLM_MODEL env
+                         is not set.
         """
         self.model_name = os.environ.get("DESIGNER_LLM_MODEL", fallback_model)
 
@@ -68,16 +68,16 @@ class Designer:
 
     def _build_system_prompt(self) -> str:
         """
-        System prompt unico per triage + design.
+        Single system prompt for triage + design.
 
-        Struttura:
+        Structure:
           <role>/<task>/<categories>/<output_contract>/<design_principles>/
           <rationale_protocol>/<hard_constraints>/<examples>
 
-        Le sezioni di design si applicano SOLO quando category == OUT_OF_DOMAIN.
+        The design sections apply ONLY when category == OUT_OF_DOMAIN.
         """
-        # Esempio di contratto progettato: dominio (museum loans) volutamente
-        # diverso da quelli reali del progetto, per evitare imitazione.
+        # Example of a designed contract: domain (museum loans) deliberately
+        # different from the project's real ones, to avoid imitation.
         contract_example = {
             "rationale": (
                 "GAP: user asks for museum artifact loan history | "
@@ -240,9 +240,9 @@ Example 2 — ambiguous query:
                            discovered_capabilities: list,
                            input_files=None) -> str:
         """
-        User prompt: include catalogo compatto, ragionamento del planner e query.
-        Il plan_reasoning e' fondamentale: da' al triage l'indizio piu' forte
-        (il planner ha gia' scritto "no service provides X" o simili).
+        User prompt: includes the compact catalog, the planner's reasoning and the query.
+        plan_reasoning is essential: it gives the triage the strongest hint
+        (the planner has already written "no service provides X" or similar).
         """
         lines = ["EXISTING CATALOG (do NOT duplicate any of these services):"]
         if discovered_services:
@@ -281,12 +281,12 @@ Classify and, if the category is OUT_OF_DOMAIN, design the missing service."""
 
     def _build_output_schema(self) -> dict:
         """
-        Schema unificato: category + justification + service_contract (null|obj).
+        Unified schema: category + justification + service_contract (null|obj).
 
-        L'uso di anyOf su service_contract forza il modello a scegliere:
-          - o null (quando la categoria non e' OUT_OF_DOMAIN)
-          - o l'oggetto completo con tutti i required popolati.
-        Non e' possibile produrre un contract parziale/malformato.
+        Using anyOf on service_contract forces the model to choose:
+          - either null (when the category is not OUT_OF_DOMAIN)
+          - or the full object with all required fields populated.
+        It is not possible to produce a partial/malformed contract.
         """
         contract_inner = {
             "type": "object",
@@ -347,34 +347,34 @@ Classify and, if the category is OUT_OF_DOMAIN, design the missing service."""
         }
 
     # ------------------------------------------------------------------
-    # VALIDAZIONE POST-PARSE
+    # POST-PARSE VALIDATION
     # ------------------------------------------------------------------
 
     def _validate_contract(self, contract: dict,
                            existing_ids: set) -> list[str]:
         """
-        Check leggero su HC-1, HC-3, HC-5 dopo il parsing.
-        HC-2 (almeno un endpoint) e HC-4 (method enum) sono gia' garantiti
-        dal guided decoding (minItems=1 e enum nello schema).
-        Ritorna lista di warning; lista vuota = contratto pulito.
+        Lightweight check on HC-1, HC-3, HC-5 after parsing.
+        HC-2 (at least one endpoint) and HC-4 (method enum) are already guaranteed
+        by guided decoding (minItems=1 and enum in the schema).
+        Returns a list of warnings; empty list = clean contract.
         """
         warnings: list[str] = []
 
         sid = contract.get("service_id", "")
         if not re.match(r"^[a-z][a-z0-9-]*-mock$", sid):
-            warnings.append(f"service_id '{sid}' non rispetta HC-3 "
-                            f"(atteso kebab-case con suffisso '-mock')")
+            warnings.append(f"service_id '{sid}' violates HC-3 "
+                            f"(expected kebab-case with '-mock' suffix)")
 
         if sid in existing_ids:
-            warnings.append(f"service_id '{sid}' duplica un servizio "
-                            f"gia' presente nel catalogo (viola HC-1)")
+            warnings.append(f"service_id '{sid}' duplicates a service "
+                            f"already present in the catalog (violates HC-1)")
 
         for idx, ep in enumerate(contract.get("suggested_endpoints", [])):
             if ep.get("method") == "GET" and not ep.get("response_schema"):
                 warnings.append(
                     f"endpoint #{idx} ({ep.get('method')} "
-                    f"{ep.get('path')}): response_schema vuoto per GET "
-                    f"(viola HC-5)"
+                    f"{ep.get('path')}): empty response_schema for GET "
+                    f"(violates HC-5)"
                 )
 
         return warnings
@@ -389,25 +389,25 @@ Classify and, if the category is OUT_OF_DOMAIN, design the missing service."""
                 discovered_capabilities: list = None,
                 input_files=None) -> dict:
         """
-        UNICA chiamata LLM per il fallback:
-          - classifica il motivo del piano vuoto
-          - se OUT_OF_DOMAIN, progetta il servizio mancante
-          - altrimenti ritorna service_contract = None
+        SINGLE LLM call for the fallback:
+          - classifies the reason for the empty plan
+          - if OUT_OF_DOMAIN, designs the missing service
+          - otherwise returns service_contract = None
 
-        Parametri:
-            query:                    la query utente originale
-            plan_reasoning:           il reasoning del planner (prima chiamata)
-            discovered_services:      servizi correntemente nel catalogo
-            discovered_capabilities:  capabilities per ciascun servizio
-            input_files:              allegati utente (se presenti)
+        Parameters:
+            query:                    the original user query
+            plan_reasoning:           the planner's reasoning (first call)
+            discovered_services:      services currently in the catalog
+            discovered_capabilities:  capabilities for each service
+            input_files:              user attachments (if any)
 
-        Ritorna un dict:
+        Returns a dict:
             {
               "category":         str,   # enum
               "justification":    str,
               "service_contract": dict | None,
             }
-        Oppure {} in caso di errore / JSON invalido.
+        Or {} in case of error / invalid JSON.
         """
         system_prompt = self._build_system_prompt()
         user_prompt   = self._build_user_prompt(
@@ -424,7 +424,7 @@ Classify and, if the category is OUT_OF_DOMAIN, design the missing service."""
         except ValueError:
             temperature = 0.2
         options = {
-            "temperature": temperature,  # leggera creativita' solo per il design
+            "temperature": temperature,  # slight creativity only for the design
             "num_ctx":     int(os.environ.get("DESIGNER_NUM_CTX", "16384")),
         }
         seed_raw = os.environ.get("DESIGNER_SEED", "").strip()
@@ -432,7 +432,7 @@ Classify and, if the category is OUT_OF_DOMAIN, design the missing service."""
             try:
                 options["seed"] = int(seed_raw)
             except ValueError:
-                print(f"[DESIGNER WARN] DESIGNER_SEED non numerico: {seed_raw!r}")
+                print(f"[DESIGNER WARN] DESIGNER_SEED is not numeric: {seed_raw!r}")
 
         try:
             t0 = time.perf_counter()
@@ -454,16 +454,16 @@ Classify and, if the category is OUT_OF_DOMAIN, design the missing service."""
             response.raise_for_status()
             raw     = response.json()["message"]["content"].strip()
             latency = time.perf_counter() - t0
-            print(f"[LATENCY] Designer analyze completato in {latency:.2f}s")
+            print(f"[LATENCY] Designer analyze completed in {latency:.2f}s")
 
             try:
                 parsed = json.loads(raw)
             except json.JSONDecodeError:
-                print(f"[DESIGNER WARN] JSON non valido. Anteprima: {raw[:200]}")
+                print(f"[DESIGNER WARN] invalid JSON. Preview: {raw[:200]}")
                 return {}
 
             if not isinstance(parsed, dict):
-                print(f"[DESIGNER WARN] Output non è un oggetto JSON: {type(parsed)}")
+                print(f"[DESIGNER WARN] Output is not a JSON object: {type(parsed)}")
                 return {}
 
             category      = parsed.get("category", "UNKNOWN")
@@ -473,21 +473,21 @@ Classify and, if the category is OUT_OF_DOMAIN, design the missing service."""
             print(f"[DESIGNER] category:      {category}")
             print(f"[DESIGNER] justification: {justification}")
 
-            # Coerenza: se categoria != OUT_OF_DOMAIN, ignoriamo qualunque
-            # contract spurio prodotto dal modello (difesa in profondita').
+            # Consistency: if category != OUT_OF_DOMAIN, ignore any
+            # spurious contract produced by the model (defense in depth).
             if category != "OUT_OF_DOMAIN":
                 if contract is not None:
-                    print("[DESIGNER] category non-OOD ma contract presente → ignoro.")
+                    print("[DESIGNER] non-OOD category but contract present → ignoring.")
                 parsed["service_contract"] = None
                 return parsed
 
-            # category == OUT_OF_DOMAIN → il contract deve esserci
+            # category == OUT_OF_DOMAIN → the contract must be there
             if not isinstance(contract, dict):
-                print("[DESIGNER WARN] category=OUT_OF_DOMAIN ma contract "
-                      "mancante o non-dict.")
+                print("[DESIGNER WARN] category=OUT_OF_DOMAIN but contract "
+                      "missing or not a dict.")
                 return parsed
 
-            # Validazione leggera post-parse sul contract
+            # Lightweight post-parse validation on the contract
             existing_ids = {s.get("_id") for s in (discovered_services or [])}
             warnings     = self._validate_contract(contract, existing_ids)
             if warnings:
@@ -495,7 +495,7 @@ Classify and, if the category is OUT_OF_DOMAIN, design the missing service."""
                 for w in warnings:
                     print(f"  - {w}")
             else:
-                print("[DESIGNER VALIDATOR] ✅ Contratto coerente.")
+                print("[DESIGNER VALIDATOR] ✅ Contract is consistent.")
 
             print(f"[DESIGNER] service_id:    {contract.get('service_id')}")
             print(f"[DESIGNER] service_name:  {contract.get('service_name')}")

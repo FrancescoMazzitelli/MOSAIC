@@ -69,7 +69,7 @@ services:
         sh /register.sh
 
         echo "Triggering API schema enrichment..."
-        # Ciclo di retry: prova ogni 3 secondi finché api-importer non risponde con successo
+        # Retry loop: try every 3 seconds until api-importer responds successfully
         until curl -s -f -X POST http://api-importer:7500/api/importer/enrich \
             -H "Content-Type: application/json" \
             -d '{"mock_server_url": "http://mock-server:8080"}'; do
@@ -146,7 +146,7 @@ services:
       - "5000:5000"
     volumes:
       - ./db-gateway:/app                                      # DEV: bind mount
-      - huggingface-cache:/root/.cache/huggingface             # FIX: modelli ML persistenti
+      - huggingface-cache:/root/.cache/huggingface             # FIX: persistent ML models
     environment:
       - MONGO_USER=admin
       - MONGO_PASS=admin
@@ -159,8 +159,8 @@ services:
       - OLLAMA_URL=http://192.168.250.40:15888
       - USE_LLM_DECOMPOSITION=true
       #- USE_LLM_DECOMPOSITION=true
-      # Parallelismo reranking CrossEncoder (per accelerare i test sotto rumore).
-      # RERANK_THREADS=0 lascia decidere a ONNX Runtime; valori tipici = n. core fisici.
+      # CrossEncoder reranking parallelism (to speed up tests under noise).
+      # RERANK_THREADS=0 lets ONNX Runtime decide; typical values = number of physical cores.
       - RERANK_THREADS=${RERANK_THREADS:-8}
       - RERANK_BATCH_SIZE=${RERANK_BATCH_SIZE:-16}
       - TOP_ENDPOINTS_PER_SERVICE=${TOP_ENDPOINTS_PER_SERVICE:-6}
@@ -263,4 +263,4 @@ volumes:
   qdrant-data:
   mock-volume:
   redis-data:
-  huggingface-cache:    # FIX: cache persistente per i modelli Qwen + CrossEncoder
+  huggingface-cache:    # FIX: persistent cache for Qwen + CrossEncoder models

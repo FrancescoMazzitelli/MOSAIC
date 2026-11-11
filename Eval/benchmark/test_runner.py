@@ -1,35 +1,35 @@
 #!/usr/bin/env python3
 """
-Test Runner — Valutazione basata su dataset con metriche RestGPT.
+Test Runner — Dataset-based evaluation with RestGPT metrics.
 
-Questo modulo si occupa di caricare i dataset di benchmark, inviare le query 
-al Control Unit ed elaborare le metriche di valutazione definite nel paper RestGPT.
+This module loads the benchmark datasets, sends the queries
+to the Control Unit and computes the evaluation metrics defined in the RestGPT paper.
 
-Metriche calcolate:
-    - Success Rate (S%)        : Percentuale di query in cui tutti i task hanno successo.
-    - Correct Path Rate (CP%)  : Percentuale di query in cui la sequenza di task (piano di esecuzione)
-                                 corrisponde esattamente all'oracolo.
-    - Delta Solution Length    : Differenza media assoluta tra la lunghezza del piano generato
-      (ΔSL)                      e quella dell'oracolo (|planned| - |oracle|).
-    - Latency (sec)            : Tempo di esecuzione della fase di planning.
+Computed metrics:
+    - Success Rate (S%)        : Percentage of queries in which all tasks succeed.
+    - Correct Path Rate (CP%)  : Percentage of queries in which the task sequence (execution plan)
+                                 matches the oracle exactly.
+    - Delta Solution Length    : Mean absolute difference between the length of the generated plan
+      (ΔSL)                      and that of the oracle (|planned| - |oracle|).
+    - Latency (sec)            : Execution time of the planning phase.
 
-Struttura delle directory attesa/generata:
+Expected/generated directory structure:
     results/
       test_runs/
         <dataset>_<model>_<run_id>/
-          responses.json       — Risposte complete per ogni query (JSON).
-          metrics.json         — Metriche aggregate a livello di dataset (JSON).
-          summary.txt          — Report leggibile e riassuntivo (Text).
-          per_query.csv        — Dettaglio tabellare delle metriche per singola query (CSV).
+          responses.json       — Full responses for each query (JSON).
+          metrics.json         — Dataset-level aggregate metrics (JSON).
+          summary.txt          — Human-readable summary report (Text).
+          per_query.csv        — Tabular detail of per-query metrics (CSV).
 
-Esempi di utilizzo:
-    # Esegui contro il Control Unit in esecuzione (default http://localhost:5500):
+Usage examples:
+    # Run against the running Control Unit (default http://localhost:5500):
     python benchmark/test_runner.py
 
-    # Specifica dataset particolari e l'URL del control-unit:
+    # Select specific datasets and the control-unit URL:
     python benchmark/test_runner.py --datasets tmdb spotify --control-url http://localhost:5500
 
-    # Specifica una directory di output personalizzata:
+    # Select a custom output directory:
     python benchmark/test_runner.py --output-dir results/my_run
 """
 
@@ -57,19 +57,19 @@ BACKEND_TYPES = {
 
 
 def parse_args():
-    """Analizza gli argomenti passati da riga di comando.
+    """Parse the command-line arguments.
 
     Returns:
-        argparse.Namespace: Un oggetto contenente gli argomenti parsati.
+        argparse.Namespace: An object holding the parsed arguments.
     """
-    p = argparse.ArgumentParser(description="Test Runner — Valutazione basata su dataset con metriche RestGpt")
+    p = argparse.ArgumentParser(description="Test Runner — dataset-based evaluation with RestGpt metrics")
     p.add_argument(
         "--datasets", nargs="+", default=None,
-        help="Dataset da valutare (default: tutti i file JSON in datasets/)"
+        help="Dataset(s) to evaluate (default: all JSON files in datasets/)"
     )
     p.add_argument(
         "--control-url", default="http://localhost:5500",
-        help="URL di base del Control Unit (default: http://localhost:5500)"
+        help="Base URL of the Control Unit (default: http://localhost:5500)"
     )
     p.add_argument(
         "--output-dir", default=None,
@@ -77,29 +77,29 @@ def parse_args():
     )
     p.add_argument(
         "--model", default=None,
-        help="Identificativo del modello per nominare la directory (default: da var d'ambiente LLM_MODEL o 'unknown')"
+        help="Model identifier used to name the directory (default: from the LLM_MODEL env var or 'unknown')"
     )
     p.add_argument(
         "--run-id", default=None,
-        help="Identificativo personalizzato per l'esecuzione (default: timestamp generato automaticamente)"
+        help="Custom run identifier (default: auto-generated timestamp)"
     )
     p.add_argument(
         "--max-queries", type=int, default=None,
-        help="Limite massimo di query per dataset (utile per test rapidi di smoke)"
+        help="Maximum number of queries per dataset (useful for quick smoke tests)"
     )
     return p.parse_args()
 
 
 def discover_datasets(selected=None):
-    """Carica in memoria i dataset in formato JSON presenti nella directory dedicata.
+    """Load the JSON datasets from the dedicated directory into memory.
 
     Args:
-        selected (list[str], opzionale): Lista di nomi di dataset da includere (senza estensione .json).
-            Se None, vengono caricati tutti i dataset disponibili.
+        selected (list[str], optional): List of dataset names to include (without the .json extension).
+            If None, all available datasets are loaded.
 
     Returns:
-        dict: Un dizionario dove le chiavi sono i nomi dei dataset e i valori sono 
-            le liste di query/oracoli caricate dal JSON.
+        dict: A dictionary whose keys are the dataset names and whose values are
+            the lists of queries/oracles loaded from the JSON.
     """
     datasets = {}
     for fpath in sorted(DATASETS_DIR.glob("*.json")):
@@ -112,18 +112,18 @@ def discover_datasets(selected=None):
 
 
 def invoke_control_unit(query, control_url):
-    """Invia una singola query al Control Unit via richiesta POST.
+    """Send a single query to the Control Unit via a POST request.
 
     Args:
-        query (str): Il testo della query da sottoporre in linguaggio naturale.
-        control_url (str): L'URL di base del Control Unit.
+        query (str): The query text to submit in natural language.
+        control_url (str): The base URL of the Control Unit.
 
     Returns:
-        tuple: Una tupla contenente:
-            - dict: Dati della risposta in formato JSON. Se si verifica un errore, 
-              contiene i dettagli dell'errore.
-            - float: Tempo impiegato (latenza) in secondi.
-            - int: Codice di stato HTTP della risposta.
+        tuple: A tuple containing:
+            - dict: Response data as JSON. If an error occurs,
+              it contains the error details.
+            - float: Elapsed time (latency) in seconds.
+            - int: HTTP status code of the response.
     """
     payload = {"input": query}
     t0 = time.perf_counter()
@@ -142,50 +142,50 @@ def invoke_control_unit(query, control_url):
 
 
 # =====================================================================
-# SEZIONE CORRISPONDENZA PATH / STEP
+# PATH / STEP MATCHING SECTION
 # =====================================================================
-# Questa sezione implementa il confronto tra il piano d'esecuzione generato 
-# e l'oracolo, con tre correzioni (FIX) rispetto allo standard base:
+# This section implements the comparison between the generated execution plan
+# and the oracle, with three corrections (FIX) over the base standard:
 #
-#   FIX 1 (Placeholder): Maschera i placeholder (es. {{...}}) prima del parsing
-#         dell'URL (urlparse), evitando che un filtro JMESPath incorporato 
-#         come {{t.items[?name=='X'] | [0].id}} venga spezzato in corrispondenza del '?'.
+#   FIX 1 (Placeholder): Masks placeholders (e.g. {{...}}) before parsing
+#         the URL (urlparse), preventing an embedded JMESPath filter
+#         such as {{t.items[?name=='X'] | [0].id}} from being split at the '?'.
 #
-#   FIX 2 (Suffisso del Servizio): Rimuove esplicitamente i prefissi REST noti
-#         (es. /rest/<svc>/<ver>) garantendo un confronto esatto del numero di 
-#         segmenti del path per evitare falsi positivi.
+#   FIX 2 (Service Suffix): Explicitly removes known REST prefixes
+#         (e.g. /rest/<svc>/<ver>), ensuring an exact comparison of the number of
+#         path segments to avoid false positives.
 #
-#   FIX 3 (Estensione Lineare DAG): Considera un "Correct Path" valido anche 
-#         quando è una legittima estensione lineare del DAG (Grafo Aciclico Diretto) 
-#         dell'oracolo. Le richieste GET indipendenti (che non dipendono da ID di task 
-#         precedenti) possono essere riordinate senza invalidare il piano.
+#   FIX 3 (DAG Linear Extension): Also treats as a valid "Correct Path"
+#         a legitimate linear extension of the oracle's DAG (Directed Acyclic Graph).
+#         Independent GET requests (which do not depend on IDs from previous
+#         tasks) can be reordered without invalidating the plan.
 #
-# NOTA: I GET intermedi ridondanti (redundant intermediate GET) non sono perdonati 
-#       da questa logica e vanno analizzati a parte.
+# NOTE: Redundant intermediate GETs are not excused
+#       by this logic and must be analysed separately.
 # =====================================================================
 
-_PLACEHOLDER_RE    = re.compile(r"\{\{.*?\}\}")          # Trova i placeholder, non-greedy
-_SERVICE_PREFIX_RE = re.compile(r"^/rest/[^/]+/[^/]+")   # Trova prefissi tipo /rest/Spotify/1.0
+_PLACEHOLDER_RE    = re.compile(r"\{\{.*?\}\}")          # Match placeholders, non-greedy
+_SERVICE_PREFIX_RE = re.compile(r"^/rest/[^/]+/[^/]+")   # Match prefixes such as /rest/Spotify/1.0
 
-# Parametri path considerati "LITERAL" (es. {type}, {region}). Non generano dipendenze 
-# temporali o d'ordine tra i task. Tutto ciò che non è qui è trattato come dipendente.
+# Path parameters considered "LITERAL" (e.g. {type}, {region}). They generate no
+# temporal or ordering dependencies between tasks. Anything not listed here is treated as dependent.
 _LITERAL_PATH_PARAMS = {"type", "media_type", "time_window", "language", "region", "sort_by"}
 
 
 def _is_literal_param(name, literal=frozenset()):
-    """Verifica se un parametro fa parte di un set letterale definito o se è un numero (enum)."""
+    """Check whether a parameter belongs to a defined literal set or is a number (enum)."""
     return name in _LITERAL_PATH_PARAMS or name in literal or name.endswith("_number")
 
 
 def derive_literal_path_params(spec):
-    """Estrae i nomi dei parametri di percorso definiti come 'enum' nelle spec OpenAPI.
+    """Extract the names of path parameters defined as 'enum' in the OpenAPI specs.
 
     Args:
-        spec (dict): Le specifiche OpenAPI del servizio.
+        spec (dict): The OpenAPI specification of the service.
 
     Returns:
-        set: Un insieme di nomi dei parametri di path che hanno valori predefiniti (letterali) 
-             e non dipendono dagli ID generati da chiamate precedenti.
+        set: A set of path parameter names that have predefined (literal) values
+             and do not depend on IDs generated by previous calls.
     """
     out = set()
     for _p, item in (spec.get("paths") or {}).items():
@@ -199,7 +199,7 @@ def derive_literal_path_params(spec):
 
 
 def _clean_path(url):
-    """Pulisce e normalizza l'URL di un task generato per il confronto (Applica FIX 1 e FIX 2)."""
+    """Clean and normalise the URL of a generated task for comparison (applies FIX 1 and FIX 2)."""
     if not url:
         return ""
     masked = _PLACEHOLDER_RE.sub("{ph}", url)            # FIX 1
@@ -212,38 +212,38 @@ def _clean_path(url):
 
 
 def extract_operation_path(task):
-    """Estrae il metodo HTTP e il percorso normalizzato da un singolo task del piano."""
+    """Extract the HTTP method and the normalised path from a single plan task."""
     operation = task.get("operation", "GET").upper()
     url = task.get("url") or task.get("endpoint") or ""
     return operation, _clean_path(url)
 
 
 def normalize_oracle_path(path):
-    """Rimuove gli spazi e i trailing slash dal path di un oracolo."""
+    """Remove whitespace and trailing slashes from an oracle path."""
     return path.strip().rstrip("/")
 
 
 def _is_wildcard_segment(segment):
-    """Determina se il segmento di URL è una wildcard o un placeholder dinamico."""
+    """Determine whether the URL segment is a wildcard or a dynamic placeholder."""
     return bool(re.fullmatch(r"\{[^/{}]+\}|\{ph\}", segment)) or segment.startswith("{{")
 
 
 def _segments_match(planned_seg, oracle_seg):
-    """Verifica la corrispondenza tra un singolo segmento generato e uno dell'oracolo."""
+    """Check the match between a single generated segment and one from the oracle."""
     if _is_wildcard_segment(oracle_seg) or _is_wildcard_segment(planned_seg):
         return True
     return planned_seg == oracle_seg
 
 
 def _step_matches(planned_step, oracle_step):
-    """Confronta un intero passo generato con uno dell'oracolo.
+    """Compare an entire generated step with one from the oracle.
 
     Args:
-        planned_step (tuple): Tupla (Metodo_HTTP, Path_Pulito) del task generato.
-        oracle_step (tuple): Tupla (Metodo_HTTP, Path_Oracolo).
+        planned_step (tuple): (HTTP_Method, Clean_Path) tuple of the generated task.
+        oracle_step (tuple): (HTTP_Method, Oracle_Path) tuple.
 
     Returns:
-        bool: True se combaciano esattamente per metodo e logica dei segmenti, False altrimenti.
+        bool: True if they match exactly by method and segment logic, False otherwise.
     """
     p_op, p_path = planned_step
     o_op, o_path = oracle_step
@@ -251,13 +251,13 @@ def _step_matches(planned_step, oracle_step):
         return False
     p_seg = [s for s in p_path.split("/") if s]
     o_seg = [s for s in o_path.split("/") if s]
-    if len(p_seg) != len(o_seg):                         # FIX 2: Previene fallback impropri
+    if len(p_seg) != len(o_seg):                         # FIX 2: Prevents improper fallbacks
         return False
     return all(_segments_match(ps, os) for ps, os in zip(p_seg, o_seg))
 
 
 def _is_source(op, path, literal=frozenset()):
-    """Verifica se un task rappresenta una SOURCE indipendente (non necessita di output precedenti)."""
+    """Check whether a task represents an independent SOURCE (it needs no previous outputs)."""
     if op != "GET":
         return False
     for seg in path.split("/"):
@@ -268,15 +268,15 @@ def _is_source(op, path, literal=frozenset()):
 
 
 def _build_partial_order(oracle, literal=frozenset()):
-    """Costruisce i vincoli di ordinamento (DAG) a partire dalla sequenza oracolo.
+    """Build the ordering constraints (DAG) from the oracle sequence.
 
-    Regole implementate:
-    - SOURCE -> DEPENDENT: Una dipendenza deve sempre seguire la sua sorgente.
-    - DEPENDENT -> DEPENDENT: L'ordine tra dipendenze va mantenuto rigido.
-    Le SOURCE tra di loro non hanno vincoli, e possono variare in ordine.
+    Implemented rules:
+    - SOURCE -> DEPENDENT: A dependency must always follow its source.
+    - DEPENDENT -> DEPENDENT: The order among dependencies must remain fixed.
+    SOURCE steps have no constraints among themselves and may vary in order.
 
     Returns:
-        set: Un insieme di tuple (i, j) indicanti i vincoli (il task `i` deve precedere `j`).
+        set: A set of tuples (i, j) indicating the constraints (task `i` must precede `j`).
     """
     is_src = [_is_source(op, p, literal) for (op, p) in oracle]
     edges = set()
@@ -292,11 +292,11 @@ def _build_partial_order(oracle, literal=frozenset()):
 
 
 def _assign_respecting_order(planned_steps, oracle_norm, literal=frozenset()):
-    """Tenta un matching (assegnamento) iniettivo valido rispettando i vincoli d'ordine.
+    """Attempt a valid injective matching (assignment) that respects the ordering constraints.
 
     Returns:
-        dict | None: Un dizionario {indice_oracolo: indice_pianificato} se il piano 
-                     è un'estensione lineare valida del DAG. Altrimenti, None.
+        dict | None: A dictionary {oracle_index: planned_index} if the plan
+                     is a valid linear extension of the DAG. Otherwise, None.
     """
     cand = []
     for o in oracle_norm:
@@ -331,16 +331,16 @@ def _assign_respecting_order(planned_steps, oracle_norm, literal=frozenset()):
 
 
 def compare_plan_with_oracle(tasks, oracle_steps, backend_mode="MOCK", literal=frozenset()):
-    """Esegue un confronto analitico approfondito tra piano generato e passi oracolo.
+    """Perform an in-depth analytical comparison between the generated plan and the oracle steps.
 
     Args:
-        tasks (list[dict]): Lista di task estratti dal piano di esecuzione generato.
-        oracle_steps (list[str]): I task definiti come soluzione corretta.
-        backend_mode (str): Modalità di utilizzo (attualmente mock/default).
-        literal (frozenset): Set di parametri passati in input riconosciuti come costanti.
+        tasks (list[dict]): List of tasks extracted from the generated execution plan.
+        oracle_steps (list[str]): The tasks defined as the correct solution.
+        backend_mode (str): Usage mode (currently mock/default).
+        literal (frozenset): Set of input parameters recognised as constants.
 
     Returns:
-        dict: Dizionario contenente match, mismatch, metriche di F1 e booleano `is_correct_path`.
+        dict: Dictionary containing matches, mismatches, F1 metrics and the `is_correct_path` boolean.
     """
     planned_steps = [extract_operation_path(t) for t in tasks]
 
@@ -351,7 +351,7 @@ def compare_plan_with_oracle(tasks, oracle_steps, backend_mode="MOCK", literal=f
             oracle_normalized.append((parts[0].strip().upper(),
                                       normalize_oracle_path(parts[1])))
 
-    # Verifica se il percorso è corretto rispettando il DAG
+    # Check that the path is correct while respecting the DAG
     assignment = _assign_respecting_order(planned_steps, oracle_normalized, literal)
     is_correct_path = assignment is not None
 
@@ -373,7 +373,7 @@ def compare_plan_with_oracle(tasks, oracle_steps, backend_mode="MOCK", literal=f
     mismatches = [{"planned": p, "oracle": None}
                   for pi, p in enumerate(planned_steps) if pi not in matched_idx]
 
-    # Diagnostica (Recall/Precision/F1) indipendente dall'ordine
+    # Diagnostics (Recall/Precision/F1), order-independent
     used, step_hits, step_missed = set(), 0, []
     for o in oracle_normalized:
         hit = next((pi for pi, p in enumerate(planned_steps)
@@ -407,7 +407,7 @@ def compare_plan_with_oracle(tasks, oracle_steps, backend_mode="MOCK", literal=f
 
 
 def is_all_successful(execution_results):
-    """Verifica se tutti i task contenuti nei risultati hanno riportato stato 'SUCCESS'."""
+    """Check whether all tasks in the results reported status 'SUCCESS'."""
     for r in execution_results:
         if r.get("status") != "SUCCESS":
             return False
@@ -415,22 +415,22 @@ def is_all_successful(execution_results):
 
 
 def compute_delta_sl(planned_count, oracle_count):
-    """Calcola la Delta Solution Length assoluta (|pianificati| - |oracolo|)."""
+    """Compute the absolute Delta Solution Length (|planned| - |oracle|)."""
     return abs(planned_count - oracle_count)
 
 
 def evaluate_dataset(dataset_name, queries, control_url, max_queries=None, output_dir=None):
-    """Orchestra la valutazione di tutte le query di un dataset specifico.
+    """Orchestrate the evaluation of all queries in a specific dataset.
 
     Args:
-        dataset_name (str): Nome del dataset in esecuzione.
-        queries (list[dict]): Lista di query presenti nel dataset.
-        control_url (str): Endpoint da chiamare per l'inferenza del plan.
-        max_queries (int, opzionale): Limita l'esecuzione ai primi N risultati.
-        output_dir (Path, opzionale): Cartella dove salvare il progresso temporaneo.
+        dataset_name (str): Name of the dataset being run.
+        queries (list[dict]): List of queries in the dataset.
+        control_url (str): Endpoint to call for plan inference.
+        max_queries (int, optional): Limit execution to the first N results.
+        output_dir (Path, optional): Folder where temporary progress is saved.
 
     Returns:
-        list[dict]: Array con i risultati dettagliati per ogni query sottomessa.
+        list[dict]: Array with the detailed results for each submitted query.
     """
     if max_queries:
         queries = queries[:max_queries]
@@ -507,12 +507,12 @@ def evaluate_dataset(dataset_name, queries, control_url, max_queries=None, outpu
 
 
 def _save_incremental(results, dataset_name, output_dir):
-    """Salva su disco in formato temporaneo i risultati, permettendo resilienza.
+    """Save the results to disk in a temporary format, allowing resilience.
 
-    Ogni iterazione aggiorna atomicamente (tramite replace):
-      - responses.json    : Contiene tutto il payload (request/response/metriche).
-      - per_query.csv     : Metriche tabellari sintetiche.
-      - metrics.json      : Calcoli e aggregazioni aggiornate.
+    Each iteration atomically updates (via replace):
+      - responses.json    : Contains the full payload (request/response/metrics).
+      - per_query.csv     : Summary tabular metrics.
+      - metrics.json      : Updated calculations and aggregations.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -551,14 +551,14 @@ def _save_incremental(results, dataset_name, output_dir):
 
 
 def compute_aggregate_metrics(results, dataset_name):
-    """Calcola le metriche medie e aggregate (RestGPT) partendo dall'array dei risultati singoli.
+    """Compute the mean and aggregate metrics (RestGPT) from the array of individual results.
 
     Args:
-        results (list[dict]): Lista prodotta da `evaluate_dataset`.
-        dataset_name (str): Nome associato all'aggregazione (es: 'tmdb').
+        results (list[dict]): List produced by `evaluate_dataset`.
+        dataset_name (str): Name associated with the aggregation (e.g. 'tmdb').
 
     Returns:
-        dict: Dizionario riassuntivo contenente P50, P95, media per Recall, Precision, Latency.
+        dict: Summary dictionary containing P50, P95 and mean for Recall, Precision, Latency.
     """
     total = len(results)
     if total == 0:
@@ -593,7 +593,7 @@ def compute_aggregate_metrics(results, dataset_name):
     p95_idx = min(int(n * 0.95), n - 1)
     p95_planning = sorted_planning[p95_idx]
 
-    # Calcolo della distribuzione dei codici HTTP
+    # Compute the HTTP status code distribution
     status_counts = {}
     http_errors = 0
     for r in results:
@@ -623,14 +623,14 @@ def compute_aggregate_metrics(results, dataset_name):
 
 
 def sanitize_path_component(value):
-    """Pulisce una stringa per garantire che sia sicura da usare nei percorsi del filesystem."""
+    """Clean a string to ensure it is safe to use in filesystem paths."""
     sanitized = re.sub(r'[<>:"/\\|?*\n\r\t]+', '_', str(value))
     sanitized = sanitized.strip(' .')
     return sanitized or 'unknown'
 
 
 def write_responses(results, output_dir):
-    """Persiste le risposte globali elaborate in un file JSON finale."""
+    """Persist the processed global responses to a final JSON file."""
     path = output_dir / "responses.json"
     with open(path, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
@@ -638,7 +638,7 @@ def write_responses(results, output_dir):
 
 
 def write_metrics(metrics, output_dir):
-    """Persiste le metriche aggregate calcolate nel file JSON finale."""
+    """Persist the computed aggregate metrics to the final JSON file."""
     path = output_dir / "metrics.json"
     with open(path, "w", encoding="utf-8") as f:
         json.dump(metrics, f, indent=2, ensure_ascii=False)
@@ -646,7 +646,7 @@ def write_metrics(metrics, output_dir):
 
 
 def write_per_query_csv(results, output_dir):
-    """Converte e salva i dati per-query in formato CSV standard."""
+    """Convert and save the per-query data in standard CSV format."""
     path = output_dir / "per_query.csv"
     with open(path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
@@ -668,7 +668,7 @@ def write_per_query_csv(results, output_dir):
 
 
 def write_summary(metrics, output_dir, run_label):
-    """Genera e scrive un file di log testuale riepilogativo per la lettura rapida."""
+    """Generate and write a textual summary log file for quick reading."""
     path = output_dir / "summary.txt"
     lines = [
         "=" * 64,
@@ -708,21 +708,21 @@ def write_summary(metrics, output_dir, run_label):
 
 
 def main():
-    """Funzione principale. Inizializza l'esecuzione dei test di benchmark."""
+    """Main function. Initialise the benchmark test execution."""
     args = parse_args()
 
     datasets = discover_datasets(args.datasets)
     if not datasets:
-        print("Nessun dataset trovato. Verifica la cartella 'datasets/'.")
+        print("No dataset found. Check the 'datasets/' folder.")
         sys.exit(1)
 
-    print(f"Dataset trovati: {list(datasets.keys())}")
+    print(f"Datasets found: {list(datasets.keys())}")
     model = sanitize_path_component(args.model or os.environ.get("LLM_MODEL", "unknown"))
     run_id = sanitize_path_component(args.run_id or datetime.now().strftime("%Y%m%d_%H%M%S"))
 
     for dataset_name, queries in datasets.items():
         print(f"\n{'=' * 64}")
-        print(f"  Dataset: {dataset_name} ({len(queries)} query totali)")
+        print(f"  Dataset: {dataset_name} ({len(queries)} total queries)")
         print(f"{'=' * 64}")
 
         run_label = f"{dataset_name}_{model}_{run_id}"
@@ -731,26 +731,26 @@ def main():
         else:
             output_dir = RESULTS_DIR / run_label
 
-        # 1. Eseguiamo il dataset contro l'endpoint del CU
+        # 1. Run the dataset against the CU endpoint
         results = evaluate_dataset(
             dataset_name, queries, args.control_url, args.max_queries, output_dir
         )
 
-        # 2. Aggreghiamo le metriche totali (RestGPT) e arricchiamole con metadati
+        # 2. Aggregate the total (RestGPT) metrics and enrich them with metadata
         metrics = compute_aggregate_metrics(results, dataset_name)
         metrics["model"] = model
         metrics["run_id"] = run_id
         metrics["control_url"] = args.control_url
 
-        # 3. Finalizziamo la scrittura su disco
+        # 3. Finalise writing to disk
         write_responses(results, output_dir)
         write_metrics(metrics, output_dir)
         write_per_query_csv(results, output_dir)
         write_summary(metrics, output_dir, run_label)
 
-        print(f"\n  Risultati salvati correttamente in: {output_dir}")
+        print(f"\n  Results successfully saved to: {output_dir}")
 
-    print("\nBenchmark completato.")
+    print("\nBenchmark completed.")
 
 
 if __name__ == "__main__":

@@ -1,35 +1,33 @@
 # Designer evaluation harness
 
-Questa directory contiene l'harness per valutare il fallback **Designer** usato
-quando il planner restituisce un piano vuoto.  È un setup nuovo e separato:
+This directory contains the harness for evaluating the **Designer** fallback used
+when the planner returns an empty plan. It is a separate, new setup:
 
-- **45 query diagnostiche** nuove, bilanciate 15/15/15:
-  - `OUT_OF_DOMAIN`: il catalogo non può soddisfare la richiesta;
-  - `AMBIGUOUS`: la richiesta è sotto-specificata o ha più intenti;
-  - `INVALID`: la richiesta è logicamente o semanticamente invalida.
-- **100 query smart-city in-domain** per misurare i falsi positivi del Designer.
-- Due annotatori indipendenti, con foglio di adjudication separato.
-- Un runner che usa `dry_run` (planning + validazione, nessuna esecuzione).
-- Un analizzatore che produce matrice di confusione, metriche di reach,
-  "silent wrong plan", contract yield/validità, riuso, plausibilità e
-  falsi positivi.
+- **45 diagnostic queries**, balanced 15/15/15:
+  - `OUT_OF_DOMAIN`: the catalog cannot satisfy the request;
+  - `AMBIGUOUS`: the request is under-specified or has multiple intents;
+  - `INVALID`: the request is logically or semantically invalid.
+- **100 in-domain smart-city queries** to measure Designer false positives.
+- Two independent annotators, with a separate adjudication sheet.
+- A runner that uses `dry_run` (planning + validation, no execution).
+- An analyzer that produces the confusion matrix, reach metrics, silent wrong
+  plan, contract yield/validity, reuse, plausibility, and false positives.
 
-Le etichette in `queries/designer_queries.csv` sono **proposte** e non
-adjudicated.  Non usarle come risultati finali nel paper prima
-dell'adjudication.
+The labels in `queries/designer_queries.csv` are **proposals** and are not
+adjudicated. Do not use them as final results in the paper before adjudication.
 
-## Struttura
+## Layout
 
 ```
 designer_eval/
 ├── queries/
-│   ├── designer_queries.csv          # seed + label proposte (poi adjudicated)
-│   └── smart_city_100.csv            # copia normalizzata delle 100 query in-domain
+│   ├── designer_queries.csv          # seed + proposed labels (then adjudicated)
+│   └── smart_city_100.csv            # normalized copy of the 100 in-domain queries
 ├── annotations/
-│   ├── annotator_A.csv               # cieco: solo query_id, query, categoria da compilare
-│   ├── annotator_B.csv               # cieco
-│   └── adjudicated.csv               # proposta visibile + categoria adjudicated
-├── contracts/                        # (opzionale) materiale di scoring
+│   ├── annotator_A.csv               # blind: only query_id, query, category to fill in
+│   ├── annotator_B.csv               # blind
+│   └── adjudicated.csv               # proposed category visible + adjudicated category
+├── contracts/                        # (optional) scoring material
 ├── results/                          # run_*/
 ├── run_designer_eval.py
 ├── analyze_designer_eval.py
@@ -40,222 +38,218 @@ designer_eval/
 └── README.md
 ```
 
-## Prerequisiti
+## Prerequisites
 
-1. Stack MOSAIC avviato (control unit, gateway, catalogo, Ollama).
-2. Control unit aggiornato con il supporto `dry_run` e i campi di routing
+1. MOSAIC stack running (control unit, gateway, catalog, Ollama).
+2. Control unit updated with `dry_run` support and the routing fields
    (`route_reason`, `planner_status`, `planner_tasks_count`,
-   `validated_tasks_count`, `designer_attempted`).  I campi sono additivi.
-3. Snapshot del catalogo completo, per HC-1 e per il riuso esatto degli
-   endpoint:
+   `validated_tasks_count`, `designer_attempted`). The fields are additive.
+3. A snapshot of the full catalog, for HC-1 and exact endpoint reuse:
 
 ```bash
-python3 test_validation/designer_eval/fetch_catalog_snapshot.py \
+python3 -m Eval.designer_eval.fetch_catalog_snapshot \
   --catalog-url http://localhost:5000 \
-  --out test_validation/designer_eval/catalog_snapshot.json
+  --out Eval/designer_eval/catalog_snapshot.json
 ```
 
-Se lo snapshot manca, il runner funziona ma HC-1 e reuse sono calcolati solo
-sui servizi recuperati; l'analisi lo segnala.
+If the snapshot is missing, the runner still works, but HC-1 and reuse are
+computed only on the retrieved services; the analysis reports this.
 
-## Annotazione e adjudication
+## Annotation and adjudication
 
-I fogli ciechi sono già stati generati.  Se devi rigenerarli:
+The blind sheets have already been generated. To regenerate them:
 
 ```bash
-python3 test_validation/designer_eval/prepare_annotation.py --force
+python3 -m Eval.designer_eval.prepare_annotation --force
 ```
 
-Protocollo:
+Protocol:
 
-1. `annotator_A.csv` e `annotator_B.csv` contengono solo `query_id`, `query` e
-   colonne vuote.  Ogni annotatore assegna una delle tre categorie e una
-   confidenza 1–5, senza vedere le etichette proposte.
-2. `adjudicated.csv` contiene anche `proposed_category`; i due annotatori
-   discutono i disaccordi e compilano `adjudicated_category`.
-3. Copiare le etichette finali in `queries/designer_queries.csv`, aggiornando
-   `gold_category` e impostando `label_status=adjudicated` per tutte le 45
-   righe.  Il runner avvisa se il file non è adjudicated.
+1. `annotator_A.csv` and `annotator_B.csv` contain only `query_id`, `query` and
+   empty columns. Each annotator assigns one of the three categories and a
+   confidence from 1 to 5, without seeing the proposed labels.
+2. `adjudicated.csv` also contains `proposed_category`; the two annotators
+   discuss disagreements and fill in `adjudicated_category`.
+3. Copy the final labels into `queries/designer_queries.csv`, updating
+   `gold_category` and setting `label_status=adjudicated` for all 45 rows. The
+   runner warns if the file is not adjudicated.
 
-   In alternativa, dopo aver compilato `annotations/adjudicated.csv`:
+   Alternatively, after filling `annotations/adjudicated.csv`:
 
    ```bash
-   python3 test_validation/designer_eval/apply_adjudication.py
+   python3 -m Eval.designer_eval.apply_adjudication
    # -> queries/designer_queries_adjudicated.csv
    ```
 
-   Poi passare `--queries queries/designer_queries_adjudicated.csv` al runner
-   e all'analisi.  Se il file `queries/designer_queries_adjudicated.csv`
-   esiste, runner e analisi lo usano automaticamente come default.
-   Usare `--in-place` solo quando l'adjudication è definitiva.
+   Then pass `--queries queries/designer_queries_adjudicated.csv` to the runner
+   and to the analysis. If `queries/designer_queries_adjudicated.csv` exists,
+   the runner and the analysis use it automatically as the default. Use
+   `--in-place` only when the adjudication is final.
 
-Non usare le 30 query di `test_validation/out_of_plan_test_requests.csv` come
-test set: sono state usate per il debug e hanno etichette di un solo
-annotatore.  Restano utili solo come pilota.
+Do not use the 30 queries in `test_validation/out_of_plan_test_requests.csv` as a
+test set: they were used for debugging and have labels from a single annotator.
+They remain useful only as a pilot.
 
-## Esecuzione
+## Running
 
-Dry-run (raccomandato; non esegue chiamate write-side):
+Dry run (recommended; it does not perform write-side calls):
 
 ```bash
-# Per un run riproducibile (opzionale, ma consigliato per il paper)
-DESIGNER_TEMPERATURE=0.0 DESIGNER_SEED=42 docker compose up -d control-unit
+# For a reproducible run (optional, but recommended for the paper)
+DESIGNER_TEMPERATURE=0.0 DESIGNER_SEED=42 docker compose -f Compose.yaml up -d control-unit
 
-python3 test_validation/designer_eval/run_designer_eval.py \
+python3 -m Eval.designer_eval.run_designer_eval \
   --control-url http://localhost:5500/api/control/invoke \
-  --catalog test_validation/designer_eval/catalog_snapshot.json \
+  --catalog Eval/designer_eval/catalog_snapshot.json \
   --dry-run \
-  --out-dir test_validation/designer_eval/results/run_manual
+  --out-dir Eval/designer_eval/results/run_manual
 ```
 
-`--dry-run` è il default.  Usa `--no-dry-run` solo se vuoi eseguire i piani e
-accetti effetti sui mock.
+`--dry-run` is the default. Use `--no-dry-run` only if you want to execute the
+plans and accept side effects on the mocks.
 
-Per un test rapido:
+For a quick test:
 
 ```bash
-python3 test_validation/designer_eval/run_designer_eval.py --limit 5 --allow-proposed
+python3 -m Eval.designer_eval.run_designer_eval --limit 5 --allow-proposed
 ```
 
-Il runner salva:
+The runner saves:
 
-- `raw_responses.jsonl`: risposta completa, una riga per query;
-- `per_query.csv`: riga piatta con routing, contratto, retrieval;
-- `run_manifest.json`: configurazione, commit, modello, hash dei prompt,
-  timestamp.
+- `raw_responses.jsonl`: full response, one line per query;
+- `per_query.csv`: flat row with routing, contract, and retrieval data;
+- `run_manifest.json`: configuration, commit, model, prompt hashes, timestamp.
 
-## Analisi
+## Analysis
 
 ```bash
-python3 test_validation/designer_eval/analyze_designer_eval.py \
-  --run-dir test_validation/designer_eval/results/run_manual
+python3 -m Eval.designer_eval.analyze_designer_eval \
+  --run-dir Eval/designer_eval/results/run_manual
 ```
 
-Output principali:
+Main outputs:
 
-- `summary.md`: tabelle leggibili;
-- `summary.json`: tutte le metriche, incluse Wilson CI;
+- `summary.md`: human-readable tables;
+- `summary.json`: all metrics, including Wilson CIs;
 - `confusion_matrix.csv`;
-- `failure_breakdown.csv` (route reason per classe);
+- `failure_breakdown.csv` (route reason per class);
 - `per_query_enriched.csv`;
-- `contracts_to_review_A.csv` e `_B.csv`: contratti dei soli OOD, con
-  `rationale` rimosso, da valutare alla cieca.
+- `contracts_to_review_A.csv` and `_B.csv`: contracts for OOD queries only,
+  with `rationale` removed, to be scored blind.
 
-### Scoring dei contratti
+### Contract scoring
 
-Ogni valutatore compila una copia di `contracts_to_review_A.csv` /
-`_B.csv` con:
+Each evaluator fills in a copy of `contracts_to_review_A.csv` /
+`_B.csv` with:
 
-- `score`: plausibilità del contratto, intero 1–5;
-- `reuse_semantic`: `yes`/`no` se il contratto riusa un'operazione o una
-  capability del catalogo (riuso semantico, distinto dal match esatto);
-- `notes`: motivazione breve.
+- `score`: contract plausibility, integer 1–5;
+- `reuse_semantic`: `yes`/`no` if the contract reuses an operation or capability
+  from the catalog (semantic reuse, distinct from an exact match);
+- `notes`: brief justification.
 
-Rubrica 1–5:
+1–5 rubric:
 
-| Score | Significato |
+| Score | Meaning |
 |---:|---|
-| 1 | Contratto inutilizzabile: servizio/endpoint incoerenti o fuori dominio. |
-| 2 | Idea debole: endpoint o schema non bastano a soddisfare la richiesta. |
-| 3 | Usabile con correzioni moderate: struttura corretta, dettagli da fissare. |
-| 4 | Buono: servizio ed endpoint plausibili, schema quasi completo. |
-| 5 | Direttamente implementabile: servizio, endpoint e schema coerenti. |
+| 1 | Unusable contract: inconsistent or out-of-domain service/endpoint. |
+| 2 | Weak idea: the endpoint or schema is not enough to satisfy the request. |
+| 3 | Usable with moderate fixes: correct structure, details to be settled. |
+| 4 | Good: plausible service and endpoint, schema almost complete. |
+| 5 | Directly implementable: coherent service, endpoint, and schema. |
 
-Poi:
+Then:
 
 ```bash
-python3 test_validation/designer_eval/analyze_designer_eval.py \
+python3 -m Eval.designer_eval.analyze_designer_eval \
   --run-dir ... \
   --scores-a .../contract_scores_A.csv \
   --scores-b .../contract_scores_B.csv
 ```
 
-L'analisi calcola media/mediana, quota di contratti con media ≥ 3, accordo
-esatto, accordo entro 1 punto, weighted kappa quadratico e ICC(2,1).
+The analysis computes mean/median, the share of contracts with mean ≥ 3, exact
+agreement, agreement within 1 point, quadratic weighted kappa, and ICC(2,1).
 
-## Metriche
+## Metrics
 
-Per le 45 query:
+For the 45 queries:
 
-- **Reach rate**: quota di query in cui il Designer viene attivato.
-- **Classification accuracy (reached)**: accuratezza della categoria tra le
-  query raggiunte.
-- **End-to-end accuracy**: accuratezza contando anche i piani non vuoti come
-  errore.
-- **Silent wrong plan (pre)**: quota di query con almeno un task del planner
-  prima della validazione.  È il fallimento di routing più importante: il
-  Designer non viene chiamato.
-- **Silent wrong plan (post)**: quota di query con task eseguibili dopo
-  validazione/auto-fix.
-- **Contract yield**: quota di OOD con un contratto prodotto.
-- **Contract hard validity**: rispetto di HC-1, HC-2, HC-3, HC-4, HC-5.
-- **Contract leakage**: contratti prodotti su query non-OOD (deve essere 0).
+- **Reach rate**: share of queries in which the Designer is activated.
+- **Classification accuracy (reached)**: category accuracy among reached
+  queries.
+- **End-to-end accuracy**: accuracy counting non-empty plans as errors too.
+- **Silent wrong plan (pre)**: share of queries with at least one planner task
+  before validation. This is the most important routing failure: the Designer is
+  not called.
+- **Silent wrong plan (post)**: share of queries with executable tasks after
+  validation/auto-fix.
+- **Contract yield**: share of OOD queries with a produced contract.
+- **Contract hard validity**: compliance with HC-1, HC-2, HC-3, HC-4, HC-5.
+- **Contract leakage**: contracts produced for non-OOD queries (must be 0).
 
-Per le 100 query smart-city:
+For the 100 smart-city queries:
 
-- **Designer activation**: quota di query in-domain in cui il Designer viene
-  attivato (falso positivo di routing).
-- **Predicted OOD**: quota classificata `OUT_OF_DOMAIN`.
-- **FP | gold op in Ret**: falsi positivi condizionati alla copertura del
-  retrieval.  Separa gli errori del Designer dagli errori di retrieval.
-- **FP attributable to retrieval**: attivazioni in cui il gold endpoint non era
-  tra i servizi recuperati.
+- **Designer activation**: share of in-domain queries in which the Designer is
+  activated (routing false positive).
+- **Predicted OOD**: share classified as `OUT_OF_DOMAIN`.
+- **FP | gold op in Ret**: false positives conditioned on retrieval coverage.
+  Separates Designer errors from retrieval errors.
+- **FP attributable to retrieval**: activations in which the gold endpoint was
+  not among the retrieved services.
 
-Complessivamente:
+Overall:
 
-- **Abstention precision/recall/F1**: il Designer come classificatore
-  "astenersi" sulle 45 + 100 query.
+- **Abstention precision/recall/F1**: the Designer as an "abstain" classifier on
+  the 45 + 100 queries.
 
-## Test dell'harness
+## Harness tests
 
 ```bash
-python3 -m unittest discover -s test_validation/designer_eval/tests -v
+python3 -m unittest discover -s Eval/designer_eval/tests -v
 ```
 
-I test coprono bilanciamento del dataset, normalizzazione endpoint, HC-1/HC-5,
-`ret_has_oracle` e la lettura dei flag booleani dal CSV.
+The tests cover dataset balancing, endpoint normalization, HC-1/HC-5,
+`ret_has_oracle`, and reading boolean flags from the CSV.
 
-## Caveat importanti
+## Important caveats
 
-- **Prompt contamination**: il prompt del Designer è stato ripulito
-  dall'esempio `smart-library-mock` e dall'esempio "energy", sostituiti con un
-  esempio neutro di loan museale.  Restano invece contaminati gli esempi del
-  planner (`smart-library-mock`, `smart-hospital-mock`, `smart-campus-mock`,
+- **Prompt contamination**: the Designer prompt was cleaned of the
+  `smart-library-mock` example and the "energy" example, replaced with a neutral
+  museum-loan example. The planner examples remain contaminated
+  (`smart-library-mock`, `smart-hospital-mock`, `smart-campus-mock`,
   `smart-logistics-mock`, `smart-hospitality-mock`, `smart-acoustics-mock`,
-  `smart-real-estate-mock`), che non sono nel catalogo smart-city.  La
-  decontaminazione del planner resta necessaria prima della versione finale e
-  richiede un rerun del planner.
-- **Designer input**: il Designer riceve solo i servizi recuperati
-  (`discovered["services"]`), non l'intero catalogo.  La metrica
-  `ret_has_gold` serve a distinguere un errore del Designer da un errore di
-  retrieval.  Una condizione "full catalog" non è implementata in questo
-  harness.
-- **Modello**: i risultati correnti del sistema usano
-  `Qwen3-Embedding-0.6B + bge-reranker-base`; non attribuire le metriche a
-  `BGE-small-en-v1.5` senza un rerun.
-- **Designer temperature**: hardcoded a `0.2` nel codice originale; ora è
-  possibile impostare `DESIGNER_TEMPERATURE` e `DESIGNER_SEED`.  Per una
-  valutazione riproducibile usare `DESIGNER_SEED` (e, se si vuole eliminare
-  la variabilità residua, `DESIGNER_TEMPERATURE=0.0`).  Compose li passa già
-  al container `control-unit`.
-- **Routing**: il Designer viene attivato solo se `tasks == []`.  Un JSON
-  malformato o un piano non vuoto non lo attivano; l'analisi espone entrambi i
-  casi con `route_reason`.
-- **Vecchio run giugno**: 26/30 corretto, ma contaminato dagli esempi del
-  prompt e non paper-ready.  `Q21`, `Q29`, `Q30` bypassano il Designer; `Q25`
-  è classificata `OUT_OF_DOMAIN` invece di `INVALID`.
+  `smart-real-estate-mock`), and those services are not in the smart-city
+  catalog. Decontaminating the planner is still necessary before the final
+  version and requires a planner rerun.
+- **Designer input**: the Designer receives only the retrieved services
+  (`discovered["services"]`), not the full catalog. The `ret_has_gold` metric
+  separates a Designer error from a retrieval error. A "full catalog" condition
+  is not implemented in this harness.
+- **Model**: the current system results use
+  `Qwen3-Embedding-0.6B + bge-reranker-base`; do not attribute the metrics to
+  `BGE-small-en-v1.5` without a rerun.
+- **Designer temperature**: hard-coded to `0.2` in the original code; it is now
+  possible to set `DESIGNER_TEMPERATURE` and `DESIGNER_SEED`. For a reproducible
+  evaluation, use `DESIGNER_SEED` (and, to remove residual variability,
+  `DESIGNER_TEMPERATURE=0.0`). Compose already passes them to the `control-unit`
+  container.
+- **Routing**: the Designer is activated only if `tasks == []`. Malformed JSON
+  or a non-empty plan do not activate it; the analysis exposes both cases via
+  `route_reason`.
+- **Old June run**: 26/30 correct, but contaminated by the prompt examples and
+  not paper-ready. `Q21`, `Q29`, `Q30` bypass the Designer; `Q25` is classified
+  as `OUT_OF_DOMAIN` instead of `INVALID`.
 
-## Comandi utili
+## Useful commands
 
 ```bash
-# Verifica rapida del dataset
+# Quick dataset check
 python3 - <<'PY'
-from test_validation.designer_eval.common import read_csv
+from Eval.designer_eval.common import read_csv
 from collections import Counter
-rows = read_csv('test_validation/designer_eval/queries/designer_queries.csv')
+rows = read_csv('Eval/designer_eval/queries/designer_queries.csv')
 print(Counter(r['gold_category'] for r in rows))
 PY
 
-# Analisi dell'ultimo run
-python3 test_validation/designer_eval/analyze_designer_eval.py
+# Analyze the latest run
+python3 -m Eval.designer_eval.analyze_designer_eval
 ```
